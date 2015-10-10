@@ -12,4 +12,3 @@ Scale communication requires the jUART plugin.
 
 Using this script requires Tampermonkey or Greasemonkey.
 
-
