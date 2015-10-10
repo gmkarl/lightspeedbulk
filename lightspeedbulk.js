@@ -188,6 +188,7 @@ NCI.findScale = function(success, failure) {
             return;
         }
         try {
+            var nci;
             var port = ports[i++];
             if (!port)
                 return tryPort();
@@ -201,13 +202,13 @@ NCI.findScale = function(success, failure) {
             } else {
                 nci = new NCI(port, serial);
             }
-            timeout = setTimeout(function(){
+            var timeout = setTimeout(function(){
                 nci.destroy();
                 tryPort();
             },5000);
             nci.onStatus = function(error, status, weight, units) {
                 clearTimeout(timeout);
-                invalid = nci.invalid;
+                var invalid = nci.invalid;
                 nci.onStatus = function(){};
                 if (invalid) {
                     nci.destroy();
@@ -281,7 +282,7 @@ NCI.prototype = {
                 this.status = "At zero";
             else if (status2 & (1<<6)) {
                 var status3 = msg.charCodeAt(4);
-                if (this.error = !!(status3 & (1<<3)))
+                if ((this.error = !!(status3 & (1<<3))))
                     this.status = "Initial zero error";
                 else if (status3 & (1<<2))
                     this.status = "Net weight";
@@ -295,15 +296,15 @@ NCI.prototype = {
         } else if ((res = NCI.lbozWeightRE.exec(msg))) {
             // lb-oz weight message
             // <LF>xLB<SP>xx.xOZ<CR><LF>Shh<CR><ETX>
-            var lbs = number(res[1]);
-            var ozs = number(res[2]);
+            var lbs = parseInt(res[1]);
+            var ozs = parseFloat(res[2]);
             this.weight = lbs + ozs / 16.0;
             this.units = "LB";
             this.processMessage(res[3]);
         } else if ((res = NCI.decimalWeightRE.exec(msg))) {
             // decimal lb weight message
             // <LF>xx.xxxUU<CR><LF>Shh<CR><ETX>
-            this.weight = number(res[1]);
+            this.weight = parseFloat(res[1]);
             this.units = res[2];
             this.processMessage(res[3]);
         } else if (this.status == "Connecting") {
@@ -360,11 +361,11 @@ function weightPrompt(edit, callback, cancel) {
     editItemWeightElement.onkeypress = function(event) {
         if (onEnterKey(event,function(){save();}))
             return false;
-    }
+    };
     editItemWeightElement.id = 'edit_item_weight_' + edit.id;
     saveElement.onclick = function() {
         return save();
-    }
+    };
     saveElement.id = 'save_element_weight_' + edit.id;
     if (document.getElementById(saveElement.id))
         document.getElementById(saveElement.id).click();
@@ -372,7 +373,7 @@ function weightPrompt(edit, callback, cancel) {
         cleanup();
         cancel();
         return false;
-    }
+    };
     promptElement.getElementsByClassName('line-description')[0].innerText = edit.description;
 
     function cleanup() {
@@ -389,7 +390,7 @@ function weightPrompt(edit, callback, cancel) {
     }
     
     function save() {
-        lbs = number(editItemWeightElement.value);
+        var lbs = parseFloat(editItemWeightElement.value);
         if (lbs == 0) {
             cancel();
         } else {
@@ -452,7 +453,7 @@ var STATE = "user";
 
 handlers.onItemSearch = function(text) {
     STATE = "itemSearch";
-}
+};
 
 handlers.onLineItem = function(item) {
     if (STATE == "itemSearch") {
@@ -465,14 +466,14 @@ handlers.onLineItem = function(item) {
     } else if (STATE == "editSave") {
         STATE = "user";
     }
-}
+};
 
 handlers.onInlineEdit = function(edit) {
     if (STATE == "editAuto_" + edit.id) {
         edit.quantity = 1;
 
         var bulkMatch = edit.description.match(bulkRE);
-        var unitPrice = number(bulkMatch[1]);
+        var unitPrice = parseFloat(bulkMatch[1]);
         var unit = bulkMatch[2];
         // popup weight dialog
         weightPrompt(edit, function(lbs){
@@ -483,7 +484,7 @@ handlers.onInlineEdit = function(edit) {
             } else {
                 note = lbs + " lb";
             }
-            var newPrice = math.ceil(unitPrice * lbs * 100)/100;
+            var newPrice = Math.ceil(unitPrice * lbs * 100)/100;
             if (edit.note != "") {
                 edit.price += newPrice;
                 edit.note += ", " + note;
@@ -503,4 +504,4 @@ handlers.onInlineEdit = function(edit) {
             }
         });
     }
-}
+};
