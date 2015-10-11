@@ -31,10 +31,10 @@ LineItem.prototype = {
         return this.element.getElementsByClassName('register-lines-control')[0].children[0].childNodes[0].data;
     },
     editInline: function() {
-        merchantos.register.inlineEditLine('transaction_line',this.id,this.id);
+        window.eval("merchantos.register.inlineEditLine('transaction_line',"+this.id+","+this.id+");");
     },
     remove: function() {
-        merchantos.register.removeLine(this.id);
+        window.eval("merchantos.register.removeLine("+this.id+");");
     }
 };
 
@@ -78,7 +78,7 @@ InlineEdit.prototype = {
         this.saveButton.click();
     },
     cancel: function() {
-        merchantos.register.cancelInlineEditLine(this.id);
+        window.eval("merchantos.register.cancelInlineEditLine("+this.id+");");
     },
 
     set price(p) {
@@ -108,8 +108,8 @@ var handlers = {
     onInlineEdit : function(edit) {},
 };
 (function() {
-    var original_addItemSearch = merchantos.register.addItemSearch;
-    merchantos.register.addItemSearch = function(element) {
+    var original_addItemSearch = unsafeWindow.merchantos.register.addItemSearch;
+    unsafeWindow.merchantos.register.addItemSearch = cloneInto(function(element) {
         try {
             handlers.onItemSearch(element.value);
         } catch(e) {
@@ -117,9 +117,9 @@ var handlers = {
             console.log(e.stack);
         }
         return original_addItemSearch(element);
-    };
-    var original_ajaxRegister_Return = merchantos.register.ajaxRegister_Return;
-    merchantos.register.ajaxRegister_Return = function(result) {
+    }, unsafeWindow, {cloneFunctions:true});
+    var original_ajaxRegister_Return = unsafeWindow.merchantos.register.ajaxRegister_Return;
+    unsafeWindow.merchantos.register.ajaxRegister_Return = cloneInto(function(result) {
         var ret = original_ajaxRegister_Return.call(this, result);
         var item;
         try {
@@ -132,7 +132,7 @@ var handlers = {
             console.log(e.stack);
         }
         return ret;
-    };
+    }, unsafeWindow, {cloneFunctions:true});
 })();
 
 
@@ -359,7 +359,11 @@ function weightPrompt(edit, callback, cancel) {
     var scale;
     editItemWeightElement.parentElement.appendChild(scaleStatusElement);
     editItemWeightElement.onkeypress = function(event) {
-        if (onEnterKey(event,function(){save();}))
+        if (unsafeWindow.onEnterKey(event, cloneInto(
+                                        function(){save();},
+                                        unsafeWindow,
+                                        {cloneFunctions:true}
+                                    )))
             return false;
     };
     editItemWeightElement.id = 'edit_item_weight_' + edit.id;
@@ -402,7 +406,7 @@ function weightPrompt(edit, callback, cancel) {
     
     edit.editElement.parentElement.appendChild(promptElement);
     edit.editElement.style.display = 'none';
-    merchantos.focus.set(editItemWeightElement.id);
+    window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
     
     function scaleFound(nci) {
         scaleStatusElement.data = "Scale: found";
