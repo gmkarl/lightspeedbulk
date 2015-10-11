@@ -151,10 +151,10 @@ function NCI(dev, serial) {
     this.serial.set_option(9600,2,7,0,0);
     this.currentMessage = "";
     var self = this;
-    this.serial.recv_callback(function(bytes, size) {
+    this.serial.recv_callback(cloneInto(function(bytes, size) {
         for (var i = 0; i < size; ++ i)
             self.recvByte(bytes[i]);
-    });
+    }, unsafeWindow, {cloneFunctions:true}));
 }
 NCI.jUART = function() {
     var plugin = unsafeWindow.document.getElementById('jUART');
