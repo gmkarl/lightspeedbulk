@@ -395,7 +395,7 @@ function weightPrompt(edit, callback, cancel) {
     
     function save() {
         var lbs = parseFloat(editItemWeightElement.value);
-        if (lbs == 0) {
+        if (!lbs) {
             cancel();
         } else {
             cleanup();
