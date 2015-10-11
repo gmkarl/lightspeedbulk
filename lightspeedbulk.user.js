@@ -177,31 +177,16 @@ NCI.findScale = function(success, failure) {
     }
     if (!serial)
         throw new Error("jUART unavailable");
-    var ports = [].concat(NCI.singleton, GM_getValue('port'), serial.getports(),
-                          "/dev/ttyS0", "/dev/tty.serial1", "/dev/ttyUSB0",
-                          "/dev/ttyS1", "/dev/tty.serial2", "/dev/ttyUSB1",
-                          "/dev/ttyS2", "/dev/tty.serial3", "/dev/ttyUSB2",
-                          "/dev/ttyS3", "/dev/tty.serial4");
-    var i = 0;
-    function tryPort() {
-        if (i >= ports.length) {
-            failure();
-            return;
-        }
+    function tryPort(nciOrPort, next) {
         try {
-            var nci;
-            var port = ports[i++];
-            if (!port)
-                return tryPort();
-            if (i > 1) {
-                console.log("Looking for scale at " + port + " ...");
-            }
-            if (i == 1) {
-                //console.log("Trying existing scale connection ...");
-                nci = port;
-                port = nci.port;
-            } else {
+            var nci, port;
+            if (typeof nciOrPort == "string") {
+                port = nciOrPort;
+                console.log("Looking for scale at " + port)
                 nci = new NCI(port, serial);
+            } else {
+                nci = nciOrPort;
+                port = nci.port;
             }
             var timeout = setTimeout(function(){
                 nci.destroy();
@@ -224,16 +209,33 @@ NCI.findScale = function(success, failure) {
                         nci.destroy();
                         console.log(e.message);
                         console.log(e.stack);
-                        tryPort();
+                        next();
                     }
                 }
             };
             nci.requestStatus();
         } catch(e) {
-            return tryPort();
+            next();
         }
     }
-    return tryPort();
+    tryPort(NCI.singleton, function() {
+        tryPort(GM_getValue('port'), function() {
+            var ports = [].concat(serial.getports(),
+                                  "/dev/ttyS0", "/dev/tty.serial0", "/dev/ttyUSB0", "COM0",
+                                  "/dev/ttyS1", "/dev/tty.serial1", "/dev/ttyUSB1", "COM1",
+                                  "/dev/ttyS2", "/dev/tty.serial2", "/dev/ttyUSB2", "COM2",
+                                  "/dev/ttyS3", "/dev/tty.serial3", "/dev/ttyUSB3", "COM3",
+                                  "/dev/ttyS4", "/dev/tty.serial4", "/dev/ttyUSB4", "COM4");
+            var portIndex = 0;
+            function tryNextPort() {
+                if (portIndex >= ports.length)
+                    failure();
+                else
+                    tryPort(ports[portIndex++], tryNextPort);
+            }
+            tryNextPort();
+        });
+    });
 };
 NCI.unrecognizedRE = /^\x0a\?\x0d\x03$/;
 NCI.statusRE = /^\x0aS(.)(.)\x0d\x03$/;
