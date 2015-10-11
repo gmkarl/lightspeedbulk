@@ -157,12 +157,13 @@ function NCI(dev, serial) {
     });
 }
 NCI.jUART = function() {
-    var plugin = document.getElementById('jUART');
+    var plugin = unsafeWindow.document.getElementById('jUART');
     if (!plugin) {
         plugin = document.createElement('object');
         plugin.type = 'application/x-juart';
         plugin.id = 'jUART';
         document.body.appendChild(plugin);
+        plugin = unsafeWindow.document.getElementById('jUART');
     }
     return plugin;
 };
