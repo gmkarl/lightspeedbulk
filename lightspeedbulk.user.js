@@ -85,13 +85,13 @@ InlineEdit.prototype = {
         return (this.priceElement.value = p);
     },
     get price() {
-        return number(this.priceElement.value);
+        return parseFloat(this.priceElement.value);
     },
     set quantity(q) {
         return (this.quantityElement.value = q);
     },
     get quantity() {
-        return number(this.quantityElement.value);
+        return parseInt(this.quantityElement.value);
     },
     set note(n) {
         return (this.noteElement.value = n);
