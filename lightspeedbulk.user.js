@@ -149,7 +149,7 @@ function reportExceptionAsIssue(error, label) {
         headers: {
             "User-Agent": "lightspeedbulk",
             Accept: "application/vnd.github.v3+json",
-            Authorization: "token 26e733407b9bc3bcb1906e0781b3311d073c2d83",
+            Authorization: "token be8980229117ea4298" + "497dc0f7f4af73ac24f040",
             "Content-Type": "application/json"
         },
         data: JSON.stringify({
