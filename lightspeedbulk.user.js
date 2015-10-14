@@ -190,6 +190,7 @@ NCI.findScale = function(success, failure) {
             }
             var timeout = setTimeout(function(){
                 nci.destroy();
+                console.log("Device connected to " + port + " did not respond to NCI status request.");
                 next();
             },5000);
             nci.onStatus = function(error, status, weight, units) {
@@ -198,7 +199,7 @@ NCI.findScale = function(success, failure) {
                 nci.onStatus = function(){};
                 if (invalid) {
                     nci.destroy();
-                    console.log("Device connected to " + port + " did not respond properly to NCI status request.");
+                    console.log("Device connected to " + port + " gave an unrecognized NCI response.");
                     next();
                 } else {
                     try {
