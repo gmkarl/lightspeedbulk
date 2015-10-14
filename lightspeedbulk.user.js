@@ -7,6 +7,7 @@
 // @match        https://*.merchantos.com/register.php*
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
 'use strict';
@@ -113,8 +114,7 @@ var handlers = {
         try {
             handlers.onItemSearch(element.value);
         } catch(e) {
-            console.log("ERROR: " + e.message);
-            console.log(e.stack);
+            reportExceptionAsIssue(e,"addItemSearch");
         }
         return original_addItemSearch(element);
     }, unsafeWindow, {cloneFunctions:true});
@@ -128,12 +128,36 @@ var handlers = {
             else if ((item = InlineEdit.fromRegisterReturn(result)))
                 handlers.onInlineEdit(item);
         } catch(e) {
-            console.log("Backend ERROR: " + e.message);
-            console.log(e.stack);
+            reportExceptionAsIssue(e,"ajaxRegister_Return");
         }
         return ret;
     }, unsafeWindow, {cloneFunctions:true});
 })();
+
+// Submit a github issue about a thrown exception
+var reportExceptionAsIssueRequest;
+function reportExceptionAsIssue(error, label) {
+    console.log(label + ": " + error.toString());
+    console.log(error.stack);
+    try {
+        if (document.getElementById("session_shop").innerHTML == "Test Store")
+            return;
+    } catch(e) {}
+    reportExceptionAsIssueRequest = GM_xmlhttpRequest({
+        url: "https://api.github.com/repos/gmkarl/lightspeedbulk/issues",
+        method: "POST",
+        headers: {
+            "User-Agent": "lightspeedbulk",
+            Accept: "application/vnd.github.v3+json",
+            Authorization: "token 26e733407b9bc3bcb1906e0781b3311d073c2d83",
+            "Content-Type": "application/json"
+        },
+        data: JSON.stringify({
+            title: label + ": " + error.toString(),
+            body: "Stack trace:\n```\n" + error.stack + "\n```"
+        }),
+    });
+}
 
 
 /////////////////
