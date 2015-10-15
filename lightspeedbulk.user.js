@@ -201,6 +201,9 @@ NCI.findScale = function(success, failure) {
     }
     if (!serial)
         throw new Error("jUART unavailable");
+    var destroyObject = {
+        destroy : function() {}
+    };
     function tryPort(nciOrPort, next) {
         try {
             var nci, port;
@@ -213,11 +216,17 @@ NCI.findScale = function(success, failure) {
                 port = nci.port;
             }
             var timeout = setTimeout(function(){
+                destroyObject.destroy = function(){};
                 nci.destroy();
                 console.log("Device connected to " + port + " did not respond to NCI status request.");
                 next();
             },5000);
+            destroyObject.destroy = function() {
+                clearTimeout(timeout);
+                nci.destroy();
+            };
             nci.onStatus = function(error, status, weight, units) {
+                destroyObject.destroy = function(){};
                 clearTimeout(timeout);
                 var invalid = nci.invalid;
                 nci.onStatus = function(){};
@@ -261,6 +270,7 @@ NCI.findScale = function(success, failure) {
             tryNextPort();
         });
     });
+    return destroyObject;
 };
 NCI.unrecognizedRE = /^\x0a\?\x0d\x03$/;
 NCI.statusRE = /^\x0aS(.)(.)\x0d\x03$/;
@@ -269,6 +279,7 @@ NCI.decimalWeightRE = /^\x0a(..\....)(..)\x0d(\x0aS..\x0d\x03)$/;
 NCI.prototype = {
     destroy: function() {
         this.serial.recv_callback(null);
+        this.onStatus = null;
         this.serial.close();
     },
     onStatus: function(error, status, weight, units) {}, // set this to handler
@@ -409,7 +420,7 @@ function weightPrompt(edit, callback, cancel) {
     promptElement.getElementsByClassName('line-description')[0].innerText = edit.description;
 
     function cleanup() {
-        if (scale) scale.onStatus = function(){};
+        scale.destroy();
         scale = null;
         editItemWeightElement.onkeypress = null;
         saveElement.onclick = null;
@@ -463,13 +474,13 @@ function weightPrompt(edit, callback, cancel) {
     function lookForScale() {
         scaleStatusElement.data = "Scale: searching ...";
         try {
-            NCI.findScale(scaleFound, noScaleFound);
+            return NCI.findScale(scaleFound, noScaleFound);
         } catch(e) {
             scaleStatusElement.data = "Scale: " + e.message;
         }
     }
     
-    lookForScale();    
+    scale = lookForScale();
 }
 
 
