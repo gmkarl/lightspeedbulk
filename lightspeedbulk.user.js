@@ -426,7 +426,8 @@ function weightPrompt(edit, callback, cancel) {
     promptElement.getElementsByClassName('line-description')[0].innerText = edit.description;
 
     function cleanup() {
-        scale.destroy();
+        if (scale)
+            scale.destroy();
         scale = null;
         editItemWeightElement.onkeypress = null;
         saveElement.onclick = null;
