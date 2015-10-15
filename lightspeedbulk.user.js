@@ -112,6 +112,7 @@ var handlers = {
     var original_addItemSearch = unsafeWindow.merchantos.register.addItemSearch;
     unsafeWindow.merchantos.register.addItemSearch = cloneInto(function(element) {
         try {
+            eventLog.push("onItemSearch(" + JSON.stringify(element.value) + ")");
             handlers.onItemSearch(element.value);
         } catch(e) {
             reportExceptionAsIssue(e,"addItemSearch");
@@ -123,10 +124,14 @@ var handlers = {
         var ret = original_ajaxRegister_Return.call(this, result);
         var item;
         try {
-            if ((item = LineItem.fromRegisterReturn(result)))
+            eventLog.push("ajaxRegister_Return(" + JSON.stringify(result) + ")");
+            if ((item = LineItem.fromRegisterReturn(result))) {
+                eventLog.push("onLineItem(" + item.id + ")");
                 handlers.onLineItem(item);
-            else if ((item = InlineEdit.fromRegisterReturn(result)))
+            } else if ((item = InlineEdit.fromRegisterReturn(result))) {
+                eventLog.push("onInlineEdit(" + item.id + ")");
                 handlers.onInlineEdit(item);
+            }
         } catch(e) {
             reportExceptionAsIssue(e,"ajaxRegister_Return");
         }
@@ -136,6 +141,7 @@ var handlers = {
 
 // Submit a github issue about a thrown exception
 var reportExceptionAsIssueRequest;
+var eventLog = [];
 function reportExceptionAsIssue(error, label) {
     console.log(label + ": " + error.toString());
     console.log(error.stack);
@@ -154,7 +160,7 @@ function reportExceptionAsIssue(error, label) {
         },
         data: JSON.stringify({
             title: label + ": " + error.toString(),
-            body: "Stack trace:\n```\n" + error.stack + "\n```"
+            body: "Stack trace:\n```\n" + error.stack + "\n```\nEvent log:\n```\n" + eventLog.join("\n") + "\n```"
         }),
     });
 }
@@ -496,6 +502,7 @@ var STATE = "user";
 
 handlers.onItemSearch = function(text) {
     STATE = "itemSearch";
+    eventLog = [eventLog[eventLog.length-1]];
 };
 
 handlers.onLineItem = function(item) {
