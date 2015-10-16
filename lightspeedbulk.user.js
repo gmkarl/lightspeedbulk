@@ -143,9 +143,9 @@ var handlers = {
 var reportExceptionAsIssueRequest;
 var eventLog = [];
 function reportExceptionAsIssue(error, label) {
-    issueTitle = label + ": " + error.toString();
-    issueStackTrace = error.stack;
-    issueEventLog = eventLog.join("\n")
+    var issueTitle = label + ": " + error.toString();
+    var issueStackTrace = error.stack;
+    var issueEventLog = eventLog.join("\n")
         .replace(/<select name="employee_id"[^]*?<\/select>/g, "<!-- censored employee id -->");
     console.log(issueTitle);
     console.log("Stack trace:");
