@@ -143,8 +143,15 @@ var handlers = {
 var reportExceptionAsIssueRequest;
 var eventLog = [];
 function reportExceptionAsIssue(error, label) {
-    console.log(label + ": " + error.toString());
-    console.log(error.stack);
+    issueTitle = label + ": " + error.toString();
+    issueStackTrace = error.stack;
+    issueEventLog = eventLog.join("\n")
+        .replace(/<select name="employee_id"[^]*?<\/select>/g, "<!-- censored employee id -->");
+    console.log(issueTitle);
+    console.log("Stack trace:");
+    console.log(issueStackTrace);
+    console.log("Event log:");
+    console.log(issueEventLog);
     try {
         if (document.getElementById("session_shop").innerHTML == "Test Store")
             return;
@@ -159,8 +166,8 @@ function reportExceptionAsIssue(error, label) {
             "Content-Type": "application/json"
         },
         data: JSON.stringify({
-            title: label + ": " + error.toString(),
-            body: "Stack trace:\n```\n" + error.stack + "\n```\nEvent log:\n```\n" + eventLog.join("\n") + "\n```"
+            title: issueTitle,
+            body: "Stack trace:\n```\n" + issueStackTrace + "\n```\nEvent log:\n```\n" + issueEventLog + "\n```"
         }),
     });
 }
