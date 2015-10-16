@@ -159,23 +159,24 @@ function reportExceptionAsIssue(error, label) {
     });
 }
 
-
-/////////////////
-// NCI Backend //
-/////////////////
-// Defines the interface to a serial NCI scale
+////////////////////
+// Serial Backend //
+////////////////////
+// Defines interfaces to serial scales
 // requires jUART
-function NCI(dev, serial) {
+
+function SerialScale(dev, jUARTSerial, implementation) {
     this.status = "Connecting";
-    this.serial = serial;
+    this.jUARTSerial = jUARTSerial;
     this.port = dev;
-    if (!this.serial.open(dev)) {
+    this.implementation = implementation;
+    if (!this.jUARTSerial.open(dev)) {
         throw new Error("Failed to open serial port: " + dev);
     }
-    this.serial.set_option(9600,2,7,0,0);
+    this.jUARTSerial.set_option(9600,2,7,0,0);
     this.currentMessage = "";
     var self = this;
-    this.serial.recv_callback(cloneInto(function(bytes, size) {
+    this.jUARTSerial.recv_callback(cloneInto(function(bytes, size) {
         try {
             for (var i = 0; i < size; ++ i)
                 self.recvByte(bytes[i]);
@@ -184,7 +185,7 @@ function NCI(dev, serial) {
         }
     }, unsafeWindow, {cloneFunctions:true}));
 }
-NCI.jUART = function() {
+SerialScale.jUART = function() {
     var plugin = unsafeWindow.document.getElementById('jUART');
     if (!plugin) {
         plugin = document.createElement('object');
@@ -195,34 +196,34 @@ NCI.jUART = function() {
     }
     return plugin;
 };
-NCI.findScale = function(success, failure) {
+SerialScale.find = function(success, failure) {
     var serial = null;
-    if (NCI.singleton) {
-        serial = NCI.singleton.serial;
+    if (SerialScale.singleton) {
+        serial = SerialScale.singleton.serial;
     }
     if (!serial) {
-        serial = NCI.jUART().Serial;
+        serial = SerialScale.jUART().Serial;
     }
     if (!serial)
         throw new Error("jUART unavailable");
     var destroyObject = {
         destroy : function() {}
     };
-    function tryPort(nciOrPort, next) {
+    function tryPort(scaleOrPort, next) {
         try {
-            var nci, port;
-            if (typeof nciOrPort == "string") {
-                port = nciOrPort;
+            var scale, port;
+            if (typeof scaleOrPort == "string") {
+                port = scaleOrPort;
                 console.log("Looking for scale at " + port)
-                nci = new NCI(port, serial);
+                scale = new NCI(port, serial);
             } else {
-                nci = nciOrPort;
-                port = nci.port;
+                scale = scaleOrPort;
+                port = scale.port;
             }
             var timeout = setTimeout(function(){
                 try {
                     destroyObject.destroy = function(){};
-                    nci.destroy();
+                    scale.destroy();
                     console.log("Device connected to " + port + " did not respond to NCI status request.");
                     next();
                 } catch(e) {
@@ -231,36 +232,36 @@ NCI.findScale = function(success, failure) {
             },5000);
             destroyObject.destroy = function() {
                 clearTimeout(timeout);
-                nci.destroy();
+                scale.destroy();
             };
-            nci.onStatus = function(error, status, weight, units) {
+            scale.onStatus = function(error, status, weight, units) {
                 destroyObject.destroy = function(){};
                 clearTimeout(timeout);
-                var invalid = nci.invalid;
-                nci.onStatus = function(){};
+                var invalid = scale.invalid;
+                scale.onStatus = function(){};
                 if (invalid) {
-                    nci.destroy();
-                    console.log("Device connected to " + port + " gave an unrecognized NCI response.");
+                    scale.destroy();
+                    console.log("Device connected to " + port + " gave an unrecognized response.");
                     next();
                 } else {
                     try {
-                        success(nci);
-                        NCI.singleton = nci;
+                        success(scale);
+                        SerialScale.singleton = nci;
                         GM_setValue('port', port);
                     } catch(e) {
-                        nci.destroy();
+                        scale.destroy();
                         console.log(e.message);
                         console.log(e.stack);
                         next();
                     }
                 }
             };
-            nci.requestStatus();
+            scale.requestStatus();
         } catch(e) {
             next();
         }
     }
-    tryPort(NCI.singleton, function() {
+    tryPort(SerialScale.singleton, function() {
         tryPort(GM_getValue('port'), function() {
             var ports = [].concat(serial.getports(),
                                   "/dev/ttyS0", "/dev/tty.serial0", "/dev/ttyUSB0", "COM0",
@@ -280,24 +281,79 @@ NCI.findScale = function(success, failure) {
     });
     return destroyObject;
 };
+SerialScale.prototype = {
+    destroy: function() {
+        this.jUARTSerial.recv_callback(null);
+        this.jUARTSerial.close();
+    },
+    recvByte: function(byte) {
+        this.currentMessage += String.fromCharCode(byte);
+        if (byte == implementation.endOfMessageByte) {
+            implementation.processMessage(this.currentMessage);
+            this.currentMessage = "";
+        }
+    },
+    sendByte: function(byte) {
+        this.jUARTSerial.send(byte);
+    },
+};
+
+function Toledo8213(dev, serial) {
+    this.serial = new SerialScale(dev, serial, this);
+}
+Toledo8213.weightRE = /^\x02([0-9\.]+)\x0d$/;
+Toledo8213.statusRE = /^\x02\?(.)\x0d$/;
+Toledo8213.commandReceivedRE = /^\x02\x0d$/;
+Toledo8213.confidenceTestStatusRE = /^\x02(.)\x0d$/;
+Toledo8213.enterEchoModeRE = /^\x02E\x0d$/;
+Toledo8213.exitEchoModeRE = /^\x02F\x0d$/;
+Toledo8213.prototype = {
+    endOfMessageByte: 0x0d,
+    destroy: function() {
+        this.serial.destroy();
+        this.onStatus = null;
+    },
+    onStatus: function(error, status, weight, units) {},
+    processMessage: function(msg) {
+    },
+    requestNormalWeight: function() {
+        this.serial.sendByte('W');
+    },
+    requestHighWeight: function() {
+        this.serial.sendByte('H');
+    },
+    zeroScale: function() {
+        this.serial.sendByte('Z');
+    },
+    initiateTest: function() {
+        this.serial.sendByte('A');
+    },
+    requestTestStatus: function() {
+        this.serial.sendByte('B');
+    },
+    enterEchoMode: function() {
+        this.serial.sendByte('E');
+    },
+    exitEchoMode: function() {
+        this.serial.sendByte('F');
+    },
+};
+
+
+function NCI(dev, serial) {
+    this.serial = new SerialScale(dev, serial, this);
+}
 NCI.unrecognizedRE = /^\x0a\?\x0d\x03$/;
 NCI.statusRE = /^\x0aS(.)(.)\x0d\x03$/;
 NCI.lbozWeightRE = /^\x0a(.)LB (..\..)OZ\x0d(\x0aS..\x0d\x03)$/;
 NCI.decimalWeightRE = /^\x0a(..\....)(..)\x0d(\x0aS..\x0d\x03)$/;
 NCI.prototype = {
+    endOfMessageByte: 3,
     destroy: function() {
-        this.serial.recv_callback(null);
+        this.serial.destroy();
         this.onStatus = null;
-        this.serial.close();
     },
-    onStatus: function(error, status, weight, units) {}, // set this to handler
-    recvByte: function(byte) {
-        this.currentMessage += String.fromCharCode(byte);
-        if (byte == 0x03) {
-            this.processMessage(this.currentMessage);
-            this.currentMessage = "";
-        }
-    },
+    onStatus: function(error, status, weight, units) {},
     processMessage: function(msg) {
         var res;
         if (NCI.unrecognizedRE.test(msg)) {
@@ -366,8 +422,8 @@ NCI.prototype = {
         }
     },
     sendCommand: function(cmd) {
-        this.serial.send(cmd);
-        this.serial.send(0x0d);
+        this.serial.sendByte(cmd);
+        this.serial.sendByte(0x0d);
     },
     requestWeight: function() {
         this.sendCommand('W');
@@ -494,7 +550,7 @@ function weightPrompt(edit, callback, cancel) {
     function lookForScale() {
         scaleStatusElement.data = "Scale: searching ...";
         try {
-            return NCI.findScale(scaleFound, noScaleFound);
+            return SerialScale.find(scaleFound, noScaleFound);
         } catch(e) {
             scaleStatusElement.data = "Scale: " + e.message;
         }
