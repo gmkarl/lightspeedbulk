@@ -176,8 +176,12 @@ function NCI(dev, serial) {
     this.currentMessage = "";
     var self = this;
     this.serial.recv_callback(cloneInto(function(bytes, size) {
-        for (var i = 0; i < size; ++ i)
-            self.recvByte(bytes[i]);
+        try {
+            for (var i = 0; i < size; ++ i)
+                self.recvByte(bytes[i]);
+        } catch(e) {
+            reportExceptionAsIssue(e,"recv_callback");
+        }
     }, unsafeWindow, {cloneFunctions:true}));
 }
 NCI.jUART = function() {
@@ -216,10 +220,14 @@ NCI.findScale = function(success, failure) {
                 port = nci.port;
             }
             var timeout = setTimeout(function(){
-                destroyObject.destroy = function(){};
-                nci.destroy();
-                console.log("Device connected to " + port + " did not respond to NCI status request.");
-                next();
+                try {
+                    destroyObject.destroy = function(){};
+                    nci.destroy();
+                    console.log("Device connected to " + port + " did not respond to NCI status request.");
+                    next();
+                } catch(e) {
+                    reportExceptionAsIssue(e,"tryPort timeout");
+                }
             },5000);
             destroyObject.destroy = function() {
                 clearTimeout(timeout);
@@ -398,24 +406,36 @@ function weightPrompt(edit, callback, cancel) {
     var scale;
     editItemWeightElement.parentElement.appendChild(scaleStatusElement);
     editItemWeightElement.onkeypress = function(event) {
-        if (unsafeWindow.onEnterKey(event, cloneInto(
-                                        function(){save();},
-                                        unsafeWindow,
-                                        {cloneFunctions:true}
-                                    )))
-            return false;
+        try {
+            if (unsafeWindow.onEnterKey(event, cloneInto(
+                                            function(){save();},
+                                            unsafeWindow,
+                                            {cloneFunctions:true}
+                                        )))
+                return false;
+        } catch(e) {
+            reportExceptionAsIssue(e,"editItemWeightElement.onkeypress");
+        }
     };
     editItemWeightElement.id = 'edit_item_weight_' + edit.id;
     saveElement.onclick = function() {
-        return save();
+        try {
+            return save();
+        } catch(e) {
+            reportExceptionAsIssue(e,"saveElement.onclick");
+        }
     };
     saveElement.id = 'save_element_weight_' + edit.id;
     if (document.getElementById(saveElement.id))
         document.getElementById(saveElement.id).click();
     cancelElement.onclick = function() {
-        cleanup();
-        cancel();
-        return false;
+        try {
+            cleanup();
+            cancel();
+            return false;
+        } catch(e) {
+            reportExceptionAsIssue(e,"cancelElement.onclick");
+        }
     };
     promptElement.getElementsByClassName('line-description')[0].innerText = edit.description;
 
