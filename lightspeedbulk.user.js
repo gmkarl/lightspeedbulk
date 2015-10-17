@@ -237,7 +237,7 @@ SerialScale.find = function(success, failure) {
             var scale, port;
             if (typeof scaleOrPort == "string") {
                 port = scaleOrPort;
-                console.log("Looking for scale at " + port)
+                console.log("Looking for scale at " + port);
                 scale = new NCI(port, serial);
             } else {
                 scale = scaleOrPort;
@@ -306,7 +306,7 @@ SerialScale.find = function(success, failure) {
 };
 SerialScale.bitfieldToString = function(field, names) {
     ret = [];
-    for (i in names) {
+    for (var i in names) {
         if (field & (1<<i)) {
            ret.push(names[i]);
         }
@@ -344,7 +344,7 @@ Toledo8213.confidenceTestStatusRE = /^\x02(.)\x0d$/;
 Toledo8213.enterEchoModeRE = /^\x02E\x0d$/;
 Toledo8213.exitEchoModeRE = /^\x02F\x0d$/;
 Toledo8213.prototype = {
-    protocol, "Toledo 8213",
+    protocol: "Toledo 8213",
     endOfMessageByte: 0x0d,
     destroy: function() {
         this.serial.destroy();
