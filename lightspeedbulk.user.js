@@ -151,7 +151,7 @@ function reportExceptionAsIssue(error, label) {
         var issueTitle = label + ": " + error.toString();
         var issueStackTrace = error.stack;
         var issueEventLog = eventLog.join("\n")
-            .replace(/<select name="employee_id"[^]*?<\/select>/g, "<!-- censored employee id -->");
+            .replace(/<select name=\\?"employee_id\\?"[^]*?<\/select>/g, "<!-- censored employee id -->");
         console.log(issueTitle);
         console.log("Stack trace:");
         console.log(issueStackTrace);
