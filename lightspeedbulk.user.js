@@ -304,6 +304,17 @@ SerialScale.find = function(success, failure) {
     });
     return destroyObject;
 };
+SerialScale.bitfieldToString = function(field, names) {
+    ret = [];
+    for (i in names) {
+        if (field & (1<<i)) {
+           ret.push(names[i]);
+        }
+    }
+    if (ret.length == 0)
+        return "Weight";
+    return ret.join(" ");
+};
 SerialScale.prototype = {
     destroy: function() {
         this.jUARTSerial.recv_callback(null);
@@ -323,6 +334,8 @@ SerialScale.prototype = {
 
 function Toledo8213(dev, serial) {
     this.serial = new SerialScale(dev, serial, this);
+    this.weightStatus = 0;
+    this.confidenceStatus = 0;
 }
 Toledo8213.weightRE = /^\x02([0-9\.]+)\x0d$/;
 Toledo8213.statusRE = /^\x02\?(.)\x0d$/;
@@ -331,13 +344,70 @@ Toledo8213.confidenceTestStatusRE = /^\x02(.)\x0d$/;
 Toledo8213.enterEchoModeRE = /^\x02E\x0d$/;
 Toledo8213.exitEchoModeRE = /^\x02F\x0d$/;
 Toledo8213.prototype = {
+    protocol, "Toledo 8213",
     endOfMessageByte: 0x0d,
     destroy: function() {
         this.serial.destroy();
         this.onStatus = null;
     },
+    get status() {
+        if (this.invalid)
+            return "Protocol Error";
+        return SerialScale.bitfieldToString(this.weightStatus | (this.confidenceStatus << 5), [
+            "Motion", "Out of Range", "Under Zero", "Outside Zero Capture Range", "Center of Zero",
+            "XICOR RAM Error", "XICOR ROM Error", , "Proc. RAM Error", "ROM Error"
+        ]);
+    },
+    get error() {
+        return this.invalid || this.weightStatus != 0 || this.confidenceStatus != 0;
+    },
+    weight: 0,
+    units: 'LB',
     onStatus: function(error, status, weight, units) {},
+    validIfEvenParity: function(num) {
+        invalid = false;
+        while (num) {
+            num >> 1;
+            if (num & 1)
+                invalid = !invalid;
+        }
+        return !invalid;
+    },
     processMessage: function(msg) {
+        var res;
+        if ((res = Toledo8213.weightRE.test(msg))) {
+            // weight data message
+            // <STX>XX.XXX<CR>
+            this.weightStatus = 0;
+            var weight = res[1];
+            if (weight.indexOf('.') == -1)
+                this.weight = parseInt(weight) / 100.0;
+            else
+                this.weight = parseFloat(weight);
+        } else if (Toledo8213.statusRE.test(msg)) {
+            // status message
+            // <STX>?<status byte><CR>
+            var status = msg.charCodeAt(2);
+            if (validIfEvenParity(status))
+                this.weightStatus = status & 0x1f;
+        } else if (Toledo8213.commandReceivedRE.test(msg)) {
+            // command to initiate a confidence test received
+            console.log(this.protocol + " confidence test initiated.");
+            this.requestTestStatus();
+            return;
+        } else if (Toledo8213.confidenceTestStatusRE.test(msg)) {
+            // confidence test status
+            // <STD><status byte><CR>
+            var status = msg.charCodeAt(1);
+            if (validIfEvenParity(status)) {
+                console.log(this.protocol + " confidence test complete? " + (status & (1<<6)));
+                this.confidenceStatus = status & 0x1f;
+            }
+        } else {
+            console.log(msg);
+            this.invalid = true;
+        }
+        this.onStatus(this.error, this.status, this.weight, this.units);
     },
     requestNormalWeight: function() {
         this.serial.sendByte('W');
@@ -354,12 +424,12 @@ Toledo8213.prototype = {
     requestTestStatus: function() {
         this.serial.sendByte('B');
     },
-    enterEchoMode: function() {
+    /*enterEchoMode: function() {
         this.serial.sendByte('E');
     },
     exitEchoMode: function() {
         this.serial.sendByte('F');
-    },
+    },*/
 };
 
 
@@ -367,11 +437,12 @@ function NCI(dev, serial) {
     this.serial = new SerialScale(dev, serial, this);
 }
 NCI.unrecognizedRE = /^\x0a\?\x0d\x03$/;
-NCI.statusRE = /^\x0aS(.)(.)\x0d\x03$/;
+NCI.statusRE = /^\x0aS(.)(.)(.?)\x0d\x03$/;
 NCI.lbozWeightRE = /^\x0a(.)LB (..\..)OZ\x0d(\x0aS..\x0d\x03)$/;
 NCI.decimalWeightRE = /^\x0a(..\....)(..)\x0d(\x0aS..\x0d\x03)$/;
 NCI.prototype = {
-    endOfMessageByte: 3,
+    protocol: "NCI",
+    endOfMessageByte: 0x03,
     destroy: function() {
         this.serial.destroy();
         this.onStatus = null;
@@ -548,8 +619,8 @@ function weightPrompt(edit, callback, cancel) {
     window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
     
     function scaleFound(s) {
-        scaleStatusElement.data = "Scale: found";
         scale = s;
+        scaleStatusElement.data = "Scale: " + scale.protocol + " found";
         scale.onStatus = function(error, status, weight, units) {
             scaleStatusElement.data = "Scale: " + status;
             if (!error && units && weight) {
