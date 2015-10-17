@@ -128,10 +128,10 @@ var handlers = {
                 eventLog.push("ajaxRegister_Return(" + JSON.stringify(result) + ")");
                 if ((item = LineItem.fromRegisterReturn(result))) {
                     eventLog.push("onLineItem(" + item.id + ")");
-                    handlers.onLineItem(item);
+                    setTimeout(function(){handlers.onLineItem(item)},0);
                 } else if ((item = InlineEdit.fromRegisterReturn(result))) {
                     eventLog.push("onInlineEdit(" + item.id + ")");
-                    handlers.onInlineEdit(item);
+                    setTimeout(function(){handlers.onInlineEdit(item)},0);
                 }
             } catch(e) {
                 reportExceptionAsIssue(e,"ajaxRegister_Return");
