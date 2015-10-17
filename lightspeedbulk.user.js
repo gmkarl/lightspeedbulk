@@ -109,67 +109,77 @@ var handlers = {
     onInlineEdit : function(edit) {},
 };
 (function() {
-    var original_addItemSearch = unsafeWindow.merchantos.register.addItemSearch;
-    unsafeWindow.merchantos.register.addItemSearch = cloneInto(function(element) {
-        try {
-            eventLog.push("onItemSearch(" + JSON.stringify(element.value) + ")");
-            handlers.onItemSearch(element.value);
-        } catch(e) {
-            reportExceptionAsIssue(e,"addItemSearch");
-        }
-        return original_addItemSearch(element);
-    }, unsafeWindow, {cloneFunctions:true});
-    var original_ajaxRegister_Return = unsafeWindow.merchantos.register.ajaxRegister_Return;
-    unsafeWindow.merchantos.register.ajaxRegister_Return = cloneInto(function(result) {
-        var ret = original_ajaxRegister_Return.call(this, result);
-        var item;
-        try {
-            eventLog.push("ajaxRegister_Return(" + JSON.stringify(result) + ")");
-            if ((item = LineItem.fromRegisterReturn(result))) {
-                eventLog.push("onLineItem(" + item.id + ")");
-                handlers.onLineItem(item);
-            } else if ((item = InlineEdit.fromRegisterReturn(result))) {
-                eventLog.push("onInlineEdit(" + item.id + ")");
-                handlers.onInlineEdit(item);
+    try {
+        var original_addItemSearch = unsafeWindow.merchantos.register.addItemSearch;
+        unsafeWindow.merchantos.register.addItemSearch = cloneInto(function(element) {
+            try {
+                eventLog.push("onItemSearch(" + JSON.stringify(element.value) + ")");
+                handlers.onItemSearch(element.value);
+            } catch(e) {
+                reportExceptionAsIssue(e,"addItemSearch");
             }
-        } catch(e) {
-            reportExceptionAsIssue(e,"ajaxRegister_Return");
-        }
-        return ret;
-    }, unsafeWindow, {cloneFunctions:true});
+            return original_addItemSearch(element);
+        }, unsafeWindow, {cloneFunctions:true});
+        var original_ajaxRegister_Return = unsafeWindow.merchantos.register.ajaxRegister_Return;
+        unsafeWindow.merchantos.register.ajaxRegister_Return = cloneInto(function(result) {
+            var ret = original_ajaxRegister_Return.call(this, result);
+            var item;
+            try {
+                eventLog.push("ajaxRegister_Return(" + JSON.stringify(result) + ")");
+                if ((item = LineItem.fromRegisterReturn(result))) {
+                    eventLog.push("onLineItem(" + item.id + ")");
+                    handlers.onLineItem(item);
+                } else if ((item = InlineEdit.fromRegisterReturn(result))) {
+                    eventLog.push("onInlineEdit(" + item.id + ")");
+                    handlers.onInlineEdit(item);
+                }
+            } catch(e) {
+                reportExceptionAsIssue(e,"ajaxRegister_Return");
+            }
+            return ret;
+        }, unsafeWindow, {cloneFunctions:true});
+    } catch(e) {
+        reportExceptionAsIssue(e,"hook insertion");
+    }
 })();
 
 // Submit a github issue about a thrown exception
 var reportExceptionAsIssueRequest;
 var eventLog = [];
 function reportExceptionAsIssue(error, label) {
-    var issueTitle = label + ": " + error.toString();
-    var issueStackTrace = error.stack;
-    var issueEventLog = eventLog.join("\n")
-        .replace(/<select name="employee_id"[^]*?<\/select>/g, "<!-- censored employee id -->");
-    console.log(issueTitle);
-    console.log("Stack trace:");
-    console.log(issueStackTrace);
-    console.log("Event log:");
-    console.log(issueEventLog);
     try {
-        if (document.getElementById("session_shop").innerHTML == "Test Store")
-            return;
-    } catch(e) {}
-    reportExceptionAsIssueRequest = GM_xmlhttpRequest({
-        url: "https://api.github.com/repos/gmkarl/lightspeedbulk/issues",
-        method: "POST",
-        headers: {
-            "User-Agent": "lightspeedbulk",
-            Accept: "application/vnd.github.v3+json",
-            Authorization: "token be8980229117ea4298" + "497dc0f7f4af73ac24f040",
-            "Content-Type": "application/json"
-        },
-        data: JSON.stringify({
-            title: issueTitle,
-            body: "Stack trace:\n```\n" + issueStackTrace + "\n```\nEvent log:\n```\n" + issueEventLog + "\n```"
-        }),
-    });
+        var issueTitle = label + ": " + error.toString();
+        var issueStackTrace = error.stack;
+        var issueEventLog = eventLog.join("\n")
+            .replace(/<select name="employee_id"[^]*?<\/select>/g, "<!-- censored employee id -->");
+        console.log(issueTitle);
+        console.log("Stack trace:");
+        console.log(issueStackTrace);
+        console.log("Event log:");
+        console.log(issueEventLog);
+        try {
+            if (document.getElementById("session_shop").innerHTML == "Test Store")
+                return;
+        } catch(e) {}
+        reportExceptionAsIssueRequest = GM_xmlhttpRequest({
+            url: "https://api.github.com/repos/gmkarl/lightspeedbulk/issues",
+            method: "POST",
+            headers: {
+                "User-Agent": "lightspeedbulk",
+                Accept: "application/vnd.github.v3+json",
+                Authorization: "token be8980229117ea4298" + "497dc0f7f4af73ac24f040",
+                "Content-Type": "application/json"
+            },
+            data: JSON.stringify({
+                title: issueTitle,
+                body: "Stack trace:\n```\n" + issueStackTrace + "\n```\nEvent log:\n```\n" + issueEventLog + "\n```"
+            }),
+        });
+    } catch(e) {
+        console.log("exception in exception handler");
+        console.log(e.toString());
+        console.log(e.stack);
+    }
 }
 
 
