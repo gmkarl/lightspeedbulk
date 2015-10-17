@@ -269,7 +269,7 @@ SerialScale.find = function(success, failure) {
                 } else {
                     try {
                         success(scale);
-                        SerialScale.singleton = nci;
+                        SerialScale.singleton = scale;
                         GM_setValue('port', port);
                     } catch(e) {
                         scale.destroy();
@@ -547,9 +547,9 @@ function weightPrompt(edit, callback, cancel) {
     edit.editElement.style.display = 'none';
     window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
     
-    function scaleFound(nci) {
+    function scaleFound(s) {
         scaleStatusElement.data = "Scale: found";
-        scale = nci;
+        scale = s;
         scale.onStatus = function(error, status, weight, units) {
             scaleStatusElement.data = "Scale: " + status;
             if (!error && units && weight) {
