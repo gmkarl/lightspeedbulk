@@ -241,6 +241,7 @@ SerialScale.find = function(success, failure) {
         scale.validate(function() {
             destroyObject.destroy = function(){};
             try {
+                console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
                 success(scale);
                 SerialScale.singleton = scale;
                 GM_setValue('port', scale.serial.port);
@@ -252,6 +253,7 @@ SerialScale.find = function(success, failure) {
                 next();
             }
         }, function() {
+            console.log("Device connected to " + scale.serial.port + " not recognized as " + scale.protocol + " scale.");
             destroyObject.destroy = function(){};
             scale.destroy();
             next();
@@ -262,26 +264,25 @@ SerialScale.find = function(success, failure) {
         if (typeof scaleOrPort != "string") try {
             return tryScale(scaleOrPort, next);
         } catch(e) {
-            next();
+            return next();
         }
-
+        
         var port = scaleOrPort;
         var typeIndex = 0;
+        console.log("Looking for scale at " + port);
         function tryNextType() {
             if (typeIndex >= SerialScale.Types.length)
                 return next();
             var Type = SerialScale.Types[typeIndex++];
-            console.log("Looking for " + Type.prototype.protocol + " scale at " + port);
             try {
                 return tryScale(new Type(port, serial), tryNextType);
             } catch(e) {
-                console.log(e.toString());
-                console.log(e.stack());
                 next();
             }
         }
         tryNextType();
     }
+
     tryPort(SerialScale.singleton, tryCachedPort);
     function tryCachedPort() {
         var port = GM_getValue('port');
@@ -470,7 +471,7 @@ Toledo8213.prototype = {
 function NCI(dev, serial) {
     this.serial = new SerialScale(dev, serial, this);
 }
-SerialScale.Types(NCI);
+SerialScale.Types.push(NCI);
 NCI.unrecognizedRE = /^\x0a\?\x0d\x03$/;
 NCI.statusRE = /^\x0aS(.)(.)(.?)\x0d\x03$/;
 NCI.lbozWeightRE = /^\x0a(.)LB (..\..)OZ\x0d(\x0aS..\x0d\x03)$/;
