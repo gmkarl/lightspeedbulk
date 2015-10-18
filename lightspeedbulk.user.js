@@ -196,17 +196,19 @@ function SerialScale(dev, jUARTSerial, implementation) {
     if (!this.jUARTSerial.open(dev)) {
         throw new Error("Failed to open serial port: " + dev);
     }
-    this.jUARTSerial.set_option(9600,2,7,0,0);
     this.currentMessage = "";
     var self = this;
     this.jUARTSerial.recv_callback(cloneInto(function(bytes, size) {
         try {
             for (var i = 0; i < size; ++ i)
-                self.recvByte(bytes[i]);
+                if (!self.recvByte(bytes[i]))
+                    break;
         } catch(e) {
             reportExceptionAsIssue(e,"recv_callback");
         }
     }, unsafeWindow, {cloneFunctions:true}));
+
+    this.jUARTSerial.set_option(9600,2,7,0,0);
 }
 SerialScale.Types = [];
 SerialScale.jUART = function() {
@@ -329,13 +331,17 @@ SerialScale.prototype = {
     destroy: function() {
         this.jUARTSerial.recv_callback(null);
         this.jUARTSerial.close();
+        this.status = "Destroyed";
     },
     recvByte: function(byte) {
         this.currentMessage += String.fromCharCode(byte);
         if (byte == this.implementation.endOfMessageByte) {
             this.implementation.processMessage(this.currentMessage);
             this.currentMessage = "";
+            if (this.status == "Destroyed")
+                return false;
         }
+        return true;
     },
     sendByte: function(byte) {
         this.jUARTSerial.send(byte);
