@@ -208,6 +208,7 @@ function SerialScale(dev, jUARTSerial, implementation) {
         }
     }, unsafeWindow, {cloneFunctions:true}));
 }
+SerialScale.Types = [];
 SerialScale.jUART = function() {
     var plugin = unsafeWindow.document.getElementById('jUART');
     if (!plugin) {
@@ -232,76 +233,80 @@ SerialScale.find = function(success, failure) {
     var destroyObject = {
         destroy : function() {}
     };
-    function tryPort(scaleOrPort, next) {
-        try {
-            var scale, port;
-            if (typeof scaleOrPort == "string") {
-                port = scaleOrPort;
-                console.log("Looking for scale at " + port);
-                scale = new NCI(port, serial);
-            } else {
-                scale = scaleOrPort;
-                port = scale.port;
-            }
-            var timeout = setTimeout(function(){
-                try {
-                    destroyObject.destroy = function(){};
-                    scale.destroy();
-                    console.log("Device connected to " + port + " did not respond to NCI status request.");
-                    next();
-                } catch(e) {
-                    reportExceptionAsIssue(e,"tryPort timeout");
-                }
-            },5000);
-            destroyObject.destroy = function() {
-                clearTimeout(timeout);
+
+    function tryScale(scale, next) {
+        destroyObject.destroy = function() {
+            scale.destroy();
+        }
+        scale.validate(function() {
+            destroyObject.destroy = function(){};
+            try {
+                success(scale);
+                SerialScale.singleton = scale;
+                GM_setValue('port', scale.serial.port);
+                GM_setValue('protocol', scale.protocol);
+            } catch(e) {
                 scale.destroy();
-            };
-            scale.onStatus = function(error, status, weight, units) {
-                destroyObject.destroy = function(){};
-                clearTimeout(timeout);
-                var invalid = scale.invalid;
-                scale.onStatus = function(){};
-                if (invalid) {
-                    scale.destroy();
-                    console.log("Device connected to " + port + " gave an unrecognized response.");
-                    next();
-                } else {
-                    try {
-                        success(scale);
-                        SerialScale.singleton = scale;
-                        GM_setValue('port', port);
-                    } catch(e) {
-                        scale.destroy();
-                        console.log(e.message);
-                        console.log(e.stack);
-                        next();
-                    }
-                }
-            };
-            scale.requestStatus();
+                console.log(e.toString());
+                console.log(e.stack);
+                next();
+            }
+        }, function() {
+            destroyObject.destroy = function(){};
+            scale.destroy();
+            next();
+        });
+    }
+
+    function tryPort(scaleOrPort, next) {
+        if (typeof scaleOrPort != "string") try {
+            return tryScale(scaleOrPort, next);
         } catch(e) {
             next();
         }
-    }
-    tryPort(SerialScale.singleton, function() {
-        tryPort(GM_getValue('port'), function() {
-            var ports = [].concat(serial.getports(),
-                                  "/dev/ttyS0", "/dev/tty.serial0", "/dev/ttyUSB0", "COM0",
-                                  "/dev/ttyS1", "/dev/tty.serial1", "/dev/ttyUSB1", "COM1",
-                                  "/dev/ttyS2", "/dev/tty.serial2", "/dev/ttyUSB2", "COM2",
-                                  "/dev/ttyS3", "/dev/tty.serial3", "/dev/ttyUSB3", "COM3",
-                                  "/dev/ttyS4", "/dev/tty.serial4", "/dev/ttyUSB4", "COM4");
-            var portIndex = 0;
-            function tryNextPort() {
-                if (portIndex >= ports.length)
-                    failure();
-                else
-                    tryPort(ports[portIndex++], tryNextPort);
+
+        var port = scaleOrPort;
+        var typeIndex = 0;
+        function tryNextType() {
+            if (typeIndex >= SerialScale.Types.length)
+                return next();
+            var Type = SerialScale.Types[typeIndex++];
+            console.log("Looking for " + Type.prototype.protocol + " scale at " + port);
+            try {
+                return tryScale(new Type(port, serial), tryNextType);
+            } catch(e) {
+                console.log(e.toString());
+                console.log(e.stack());
+                next();
             }
-            tryNextPort();
-        });
-    });
+        }
+        tryNextType();
+    }
+    tryPort(SerialScale.singleton, tryCachedPort);
+    function tryCachedPort() {
+        var port = GM_getValue('port');
+        var protocol = GM_getValue('protocol');
+        for (var i in SerialScale.Types)
+            if (SerialScale.Types[i].prototype.protocol == protocol)
+                return tryPort(new SerialScale.Types[i](port, serial), tryPortList);
+        return tryPortList();
+    }
+    function tryPortList() {
+        var ports = [].concat(serial.getports(),
+                              "/dev/ttyS0", "/dev/tty.serial0", "/dev/ttyUSB0", "COM0",
+                              "/dev/ttyS1", "/dev/tty.serial1", "/dev/ttyUSB1", "COM1",
+                              "/dev/ttyS2", "/dev/tty.serial2", "/dev/ttyUSB2", "COM2",
+                              "/dev/ttyS3", "/dev/tty.serial3", "/dev/ttyUSB3", "COM3",
+                              "/dev/ttyS4", "/dev/tty.serial4", "/dev/ttyUSB4", "COM4");
+        var portIndex = 0;
+        function tryNextPort() {
+            if (portIndex >= ports.length)
+                failure();
+            else
+                tryPort(ports[portIndex++], tryNextPort);
+        }
+        tryNextPort();
+    }
     return destroyObject;
 };
 SerialScale.bitfieldToString = function(field, names) {
@@ -322,8 +327,8 @@ SerialScale.prototype = {
     },
     recvByte: function(byte) {
         this.currentMessage += String.fromCharCode(byte);
-        if (byte == implementation.endOfMessageByte) {
-            implementation.processMessage(this.currentMessage);
+        if (byte == this.implementation.endOfMessageByte) {
+            this.implementation.processMessage(this.currentMessage);
             this.currentMessage = "";
         }
     },
@@ -337,6 +342,7 @@ function Toledo8213(dev, serial) {
     this.weightStatus = 0;
     this.confidenceStatus = 0;
 }
+SerialScale.Types.push(Toledo8213);
 Toledo8213.weightRE = /^\x02([0-9\.]+)\x0d$/;
 Toledo8213.statusRE = /^\x02\?(.)\x0d$/;
 Toledo8213.commandReceivedRE = /^\x02\x0d$/;
@@ -349,6 +355,34 @@ Toledo8213.prototype = {
     destroy: function() {
         this.serial.destroy();
         this.onStatus = null;
+        clearTimeout(this.timeout);
+    },
+    validate: function(success, failure) {
+        var onStatusCache = this.onStatus;
+        this.timeout = setTimeout(handleTimeout, 1000);
+        var self = this;
+        function handleTimeout() {
+            self.onStatus = onStatusCache;
+            failure();
+        }
+        function handleTestInitiation(error, status, weight, units) {
+            clearTimeout(self.timeout);
+            if (self.invalid) return failure();
+            self.onStatus = handleTestStatus;
+            self.requestTestStatus();
+        }
+        function handleTestStatus(error, status, weight, units) {
+            if (self.invalid) return failure();
+            self.onStatus = onStatusCache;
+            success();
+        }
+        if (this.confidenceStatus == 0) {
+            self.onStatus = handleTestInitiation;
+            self.initiateTest();
+        } else {
+            self.onStatus = handleTestStatus;
+            self.requestTestStatus();
+        }
     },
     get status() {
         if (this.invalid)
@@ -436,6 +470,7 @@ Toledo8213.prototype = {
 function NCI(dev, serial) {
     this.serial = new SerialScale(dev, serial, this);
 }
+SerialScale.Types(NCI);
 NCI.unrecognizedRE = /^\x0a\?\x0d\x03$/;
 NCI.statusRE = /^\x0aS(.)(.)(.?)\x0d\x03$/;
 NCI.lbozWeightRE = /^\x0a(.)LB (..\..)OZ\x0d(\x0aS..\x0d\x03)$/;
@@ -446,6 +481,24 @@ NCI.prototype = {
     destroy: function() {
         this.serial.destroy();
         this.onStatus = null;
+        clearTimeout(this.timeout);
+    },
+    validate: function(success, failure) {
+        var onStatusCache = this.onStatus;
+        this.timeout = setTimeout(handleTimeout, 1000);
+        var self = this;
+        function handleTimeout() {
+            self.onStatus = onStatusCache;
+            failure();
+        }
+        function handleStatus(error, status, weight, units) {
+            clearTimeout(self.timeout);
+            if (self.invalid) return failure();
+            self.onStatus = onStatusCache;
+            success();
+        }
+        self.onStatus = handleStatus;
+        self.requestStatus();
     },
     onStatus: function(error, status, weight, units) {},
     processMessage: function(msg) {
