@@ -223,7 +223,7 @@ SerialScale.jUART = function() {
 SerialScale.find = function(success, failure) {
     var serial = null;
     if (SerialScale.singleton) {
-        serial = SerialScale.singleton.serial;
+        serial = SerialScale.singleton.serial.serial;
     }
     if (!serial) {
         serial = SerialScale.jUART().Serial;
@@ -288,8 +288,12 @@ SerialScale.find = function(success, failure) {
         var port = GM_getValue('port');
         var protocol = GM_getValue('protocol');
         for (var i in SerialScale.Types)
-            if (SerialScale.Types[i].prototype.protocol == protocol)
+            if (SerialScale.Types[i].prototype.protocol == protocol) try {
                 return tryPort(new SerialScale.Types[i](port, serial), tryPortList);
+            } catch(e) {
+                console.log(e.toString())
+                console.log(e.stack)
+            }
         return tryPortList();
     }
     function tryPortList() {
