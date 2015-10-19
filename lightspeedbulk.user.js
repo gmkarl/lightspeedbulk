@@ -128,10 +128,28 @@ var handlers = {
                 eventLog.push("ajaxRegister_Return(" + JSON.stringify(result) + ")");
                 if ((item = LineItem.fromRegisterReturn(result))) {
                     eventLog.push("onLineItem(" + item.id + ")");
-                    setTimeout(function(){handlers.onLineItem(item)},0);
+                    if (item.element)
+                        handlers.onLineItem(item);
+                    else
+                        setTimeout(function(){
+                            try {
+                                handlers.onLineItem(item);
+                            } catch(e) {
+                                reportExceptionAsIssue(e,"setTimeout onLineItem");
+                            }
+                        },0);
                 } else if ((item = InlineEdit.fromRegisterReturn(result))) {
                     eventLog.push("onInlineEdit(" + item.id + ")");
-                    setTimeout(function(){handlers.onInlineEdit(item)},0);
+                    if (item.editElement)
+                        handlers.onInlineEdit(item);
+                    else
+                        setTimeout(function(){
+                            try {
+                                handlers.onInlineEdit(item);
+                            } catch(e) {
+                                reportExceptionAsIssue(e,"setTimeout onInlineEdit");
+                            }
+                        },0);
                 }
             } catch(e) {
                 reportExceptionAsIssue(e,"ajaxRegister_Return");
