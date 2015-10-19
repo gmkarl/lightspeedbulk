@@ -199,6 +199,9 @@ function SerialScale(dev, jUARTSerial, implementation) {
     this.currentMessage = "";
     var self = this;
     this.jUARTSerial.recv_callback(cloneInto(function(bytes, size) {
+        if (self.status == "Destroyed") {
+            return;
+        }
         try {
             for (var i = 0; i < size; ++ i)
                 if (!self.recvByte(bytes[i]))
@@ -279,6 +282,7 @@ SerialScale.find = function(success, failure) {
             try {
                 return tryScale(new Type(port, serial), tryNextType);
             } catch(e) {
+                destroyObject.destroy();
                 next();
             }
         }
@@ -317,7 +321,7 @@ SerialScale.find = function(success, failure) {
     return destroyObject;
 };
 SerialScale.bitfieldToString = function(field, names) {
-    ret = [];
+    var ret = [];
     for (var i in names) {
         if (field & (1<<i)) {
            ret.push(names[i]);
@@ -370,30 +374,20 @@ Toledo8213.prototype = {
     },
     validate: function(success, failure) {
         var onStatusCache = this.onStatus;
-        this.timeout = setTimeout(handleTimeout, 1000);
+        this.timeout = setTimeout(handleTimeout, 10000);
         var self = this;
         function handleTimeout() {
             self.onStatus = onStatusCache;
             failure();
         }
-        function handleTestInitiation(error, status, weight, units) {
+        function handleStatus(error, status, weight, units) {
             clearTimeout(self.timeout);
-            if (self.invalid) return failure();
-            self.onStatus = handleTestStatus;
-            self.requestTestStatus();
-        }
-        function handleTestStatus(error, status, weight, units) {
             if (self.invalid) return failure();
             self.onStatus = onStatusCache;
             success();
         }
-        if (this.confidenceStatus == 0) {
-            self.onStatus = handleTestInitiation;
-            self.initiateTest();
-        } else {
-            self.onStatus = handleTestStatus;
-            self.requestTestStatus();
-        }
+        self.onStatus = handleStatus;
+        self.requestWeight();
     },
     get status() {
         if (this.invalid)
@@ -410,17 +404,19 @@ Toledo8213.prototype = {
     units: 'LB',
     onStatus: function(error, status, weight, units) {},
     validIfEvenParity: function(num) {
-        invalid = false;
+        this.invalid = false;
         while (num) {
-            num >> 1;
             if (num & 1)
-                invalid = !invalid;
+                this.invalid = !this.invalid;
+            num >>= 1;
         }
-        return !invalid;
+        if (this.invalid)
+            console.log("Parity error");
+        return !this.invalid;
     },
     processMessage: function(msg) {
         var res;
-        if ((res = Toledo8213.weightRE.test(msg))) {
+        if ((res = Toledo8213.weightRE.exec(msg))) {
             // weight data message
             // <STX>XX.XXX<CR>
             this.weightStatus = 0;
@@ -433,7 +429,7 @@ Toledo8213.prototype = {
             // status message
             // <STX>?<status byte><CR>
             var status = msg.charCodeAt(2);
-            if (validIfEvenParity(status))
+            if (this.validIfEvenParity(status))
                 this.weightStatus = status & 0x1f;
         } else if (Toledo8213.commandReceivedRE.test(msg)) {
             // command to initiate a confidence test received
@@ -444,17 +440,17 @@ Toledo8213.prototype = {
             // confidence test status
             // <STD><status byte><CR>
             var status = msg.charCodeAt(1);
-            if (validIfEvenParity(status)) {
+            if (this.validIfEvenParity(status)) {
                 console.log(this.protocol + " confidence test complete? " + (status & (1<<6)));
                 this.confidenceStatus = status & 0x1f;
             }
         } else {
-            console.log(msg);
+            console.log("Protocol error: " + msg);
             this.invalid = true;
         }
         this.onStatus(this.error, this.status, this.weight, this.units);
     },
-    requestNormalWeight: function() {
+    requestWeight: function() {
         this.serial.sendByte('W');
     },
     requestHighWeight: function() {
@@ -496,7 +492,7 @@ NCI.prototype = {
     },
     validate: function(success, failure) {
         var onStatusCache = this.onStatus;
-        this.timeout = setTimeout(handleTimeout, 1000);
+        this.timeout = setTimeout(handleTimeout, 10000);
         var self = this;
         function handleTimeout() {
             self.onStatus = onStatusCache;
@@ -655,7 +651,7 @@ function weightPrompt(edit, callback, cancel) {
 
     function cleanup() {
         if (scale)
-            scale.destroy();
+            scale.onStatus = function(){};
         scale = null;
         editItemWeightElement.onkeypress = null;
         saveElement.onclick = null;
