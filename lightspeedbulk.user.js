@@ -534,7 +534,7 @@ function weightPrompt(edit, callback, cancel) {
 ////////////////////////
 
 // bulk item descriptions end in "$x.xx/lb"
-var bulkRE = /\$([0-9\.]*)\/(#|lb|oz)$/;
+var bulkRE = /\$([0-9\.]*) ?(\/|per) ?(#|lb|oz)s?$/;
 
 var STATE = "user";
 
@@ -562,7 +562,7 @@ handlers.onInlineEdit = function(edit) {
 
         var bulkMatch = edit.description.match(bulkRE);
         var unitPrice = parseFloat(bulkMatch[1]);
-        var unit = bulkMatch[2];
+        var unit = bulkMatch[3];
         // popup weight dialog
         weightPrompt(edit, function(lbs){
             var note;
