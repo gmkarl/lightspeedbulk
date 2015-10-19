@@ -264,11 +264,13 @@ SerialScale.find = function(success, failure) {
         scale.validate(function() {
             destroyObject.destroy = function(){};
             try {
-                console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
                 success(scale);
-                SerialScale.singleton = scale;
-                GM_setValue('port', scale.serial.port);
-                GM_setValue('protocol', scale.protocol);
+		if (SerialScale.singleton != scale) {
+	                console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
+       	        	SerialScale.singleton = scale;
+	                GM_setValue('port', scale.serial.port);
+	                GM_setValue('protocol', scale.protocol);
+		}
             } catch(e) {
                 scale.destroy();
                 console.log(e.toString());
