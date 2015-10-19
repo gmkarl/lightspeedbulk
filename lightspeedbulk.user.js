@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lightspeed Serial Scale Bulk Items
 // @namespace    https://github.com/gmkarl/lightspeedbulk/
-// @version      0.3
+// @version      0.4
 // @description  Communicates with NCI scales to price bulk items in the Lightspeed Register.
 // @author       Karl Semich
 // @match        https://*.merchantos.com/register.php*
@@ -534,7 +534,8 @@ function weightPrompt(edit, callback, cancel) {
 ////////////////////////
 
 // bulk item descriptions end in "$x.xx/lb"
-var bulkRE = /\$([0-9\.]*) ?(\/|per) ?(#|lb|oz)s?$/;
+// the dollar sign may be missing; the '/' may be a 'per'; the expression may be surrounded in parentheses
+var bulkRE = /(?:\(\$?|[\$ ])([0-9\.]*) ?(?:\/|per) ?(#|lb|oz)s?\)?$/;
 
 var STATE = "user";
 
@@ -562,7 +563,7 @@ handlers.onInlineEdit = function(edit) {
 
         var bulkMatch = edit.description.match(bulkRE);
         var unitPrice = parseFloat(bulkMatch[1]);
-        var unit = bulkMatch[3];
+        var unit = bulkMatch[2];
         // popup weight dialog
         weightPrompt(edit, function(lbs){
             var note;
