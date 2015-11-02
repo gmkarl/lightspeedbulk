@@ -833,10 +833,10 @@ handlers.onInlineEdit = function(edit) {
         weightPrompt(edit, function(lbs){
             var note;
             if (unit == "oz") {
-                note = (lbs * 16) + " oz";
+                note = Math.round(lbs * 16 * 100)/100 + " oz";
                 unitPrice *= 16;
             } else {
-                note = lbs + " lb";
+                note = Math.round(lbs*100)/100 + " lb";
             }
             var newPrice = Math.ceil(unitPrice * lbs * 100)/100;
             if (edit.note != "") {
