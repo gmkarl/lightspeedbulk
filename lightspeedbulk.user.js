@@ -265,12 +265,12 @@ SerialScale.find = function(success, failure) {
             destroyObject.destroy = function(){};
             try {
                 success(scale);
-		if (SerialScale.singleton != scale) {
-	                console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
-       	        	SerialScale.singleton = scale;
-	                GM_setValue('port', scale.serial.port);
-	                GM_setValue('protocol', scale.protocol);
-		}
+                if (SerialScale.singleton != scale) {
+                    console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
+                    SerialScale.singleton = scale;
+                    GM_setValue('port', scale.serial.port);
+                    GM_setValue('protocol', scale.protocol);
+                }
             } catch(e) {
                 scale.destroy();
                 console.log(e.toString());
@@ -684,7 +684,12 @@ function weightPrompt(edit, callback, cancel) {
     }
     
     function save() {
-        var lbs = parseFloat(editItemWeightElement.value);
+        var entry = editItemWeightElement.value;
+        var lbs = parseFloat(entry);
+        if (entry != "" && entry != "0.0" && entry != "0" && (!(lbs > 0.04) || !(lbs < 30))) {
+            lbs = window.prompt("This weight looks unlikely: " + entry + " lbs\nPlease enter or re-enter the proper weight in lbs.", lbs);
+            lbs = parseFloat(lbs);
+        }
         cleanup();
         if (!lbs) {
             cancel();
@@ -708,9 +713,12 @@ function weightPrompt(edit, callback, cancel) {
                     scaleStatusElement.data = "Scale: " + units + " not LBs";
                 } else {
                     scaleStatusElement.data = "";
+                    var lastWeight = editItemWeightElement.value;
                     editItemWeightElement.value = weight;
-                    save();
-                    return;
+                    if (weight == lastWeight) {
+	                    save();
+                        return;
+                    }
                 }
             }
             scale.requestWeight();
