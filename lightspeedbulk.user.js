@@ -627,9 +627,10 @@ weightPromptElement.innerHTML =
     '</td>' +
     '</tr></tbody>';
 
-function weightPrompt(edit, callback, cancel_main) {
+function weightPrompt(edit, callback, cancel_callback) {
     var tare = 0;
     var save = save_main;
+    var cancel_main = function () { cleanup(); cancel_callback(); };
     var cancel = cancel_main;
     var promptElement = weightPromptElement.cloneNode(true);
     var editItemWeightElement = promptElement.getElementsByClassName('number')[0];
@@ -705,7 +706,6 @@ function weightPrompt(edit, callback, cancel_main) {
         document.getElementById(saveElement.id).click();
     cancelElement.onclick = function() {
         try {
-            cleanup();
             cancel();
             return false;
         } catch(e) {
