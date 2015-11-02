@@ -719,10 +719,12 @@ function weightPrompt(edit, callback, cancel_main) {
             scale.onStatus = function(){};
         scale = null;
         editItemWeightElement.onkeypress = null;
+        startTareElement.onclick = null;
         saveElement.onclick = null;
         cancelElement.onclick = null;
         promptElement = null;
         editItemWeightElement = null;
+        startTareElement = null;
         scaleStatusElement = null;
         saveElement = null;
         cancelElement = null;
