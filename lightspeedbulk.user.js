@@ -685,7 +685,7 @@ function weightPrompt(edit, callback, cancel_callback) {
         cancel = function() {
             tare = nextTare;
             startTareElement.style.visibility = "initial";
-            saveElement.innerText = "Tare";
+            saveElement.innerText = "Save";
             cancelElement.innerText = "Cancel";
             save = save_main;
             cancel = cancel_main;
