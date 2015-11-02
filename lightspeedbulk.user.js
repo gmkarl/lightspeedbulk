@@ -733,15 +733,15 @@ function weightPrompt(edit, callback, cancel_callback) {
     function save_main() {
         var entry = editItemWeightElement.value;
         var lbs = parseFloat(entry);
-        if (entry != "" && entry != "0.0" && entry != "0" && (!(lbs > 0.04) || !(lbs < 30))) {
-            lbs = window.prompt("This weight looks unlikely: " + entry + " lbs\nPlease enter or re-enter the proper weight in lbs.", lbs);
+        if (entry != "" && entry != "0.0" && entry != "0" && (!(lbs - tare > 0.04) || !(lbs < 30))) {
+            lbs = window.prompt("This weight looks unlikely: " + entry + " lbs\nPlease enter or re-enter the proper weight in lbs.  Tare of " + tare + " will be subtracted after.", lbs);
             lbs = parseFloat(lbs);
         }
         cleanup();
         if (!lbs) {
             cancel();
         } else {
-            callback(lbs);
+            callback(lbs - tare);
         }
         return false;
     }
