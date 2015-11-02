@@ -658,6 +658,7 @@ function weightPrompt(edit, callback, cancel_main) {
         startTareElement.style.visibility = "hidden";
         saveElement.innerText = "Tare";
         cancelElement.innerText = "Abort";
+        focusWeightInput();
         save = function() {
             nextTare = parseFloat(editItemWeightElement.value);
             cancel();
@@ -738,7 +739,10 @@ function weightPrompt(edit, callback, cancel_main) {
     
     edit.editElement.parentElement.appendChild(promptElement);
     edit.editElement.style.display = 'none';
-    window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
+    function focusWeightInput() {
+        window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
+    }
+    focusWeightInput();
     
     function scaleFound(s) {
         scale = s;
