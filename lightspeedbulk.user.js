@@ -661,6 +661,24 @@ function weightPrompt(edit, callback, cancel_main) {
         focusWeightInput();
         save = function() {
             nextTare = parseFloat(editItemWeightElement.value);
+            if (nextTare) {
+                if (scale) {
+                    var onStatusCache = scale.onStatus;
+                    save = function(){};
+                    scale.onStatus = function(error, status, weight, units) {
+                        if (weight != 0) {
+                            onStatusCache(error, "Wait for zero (" + status + ")", weight, units);
+                        } else {
+                            save = save_main;
+                            scale.onStatus = onStatusCache;
+                            scale.onStatus(error, status, weight, units);
+                        }
+                    }
+                }
+                startTareElement.innerText = "Retare (" + nextTare + " lb)"
+            } else {
+                startTareElement.innerText = "Start Tare";
+            }
             cancel();
         };
         cancel = function() {
@@ -670,19 +688,8 @@ function weightPrompt(edit, callback, cancel_main) {
             cancelElement.innerText = "Cancel";
             save = save_main;
             cancel = cancel_main;
-            if (parseFloat(editItemWeightElement.value) != 0 && scale) {
-                var onStatusCache = scale.onStatus;
-                save = function(){};
-                scale.onStatus = function(error, status, weight, units) {
-                    if (weight != 0) {
-                        onStatusCache(error, "Wait for zero (" + status + ")", weight, units);
-                    } else {
-                        save = save_main;
-                        scale.onStatus = onStatusCache;
-                        scale.onStatus(error, status, weight, units);
-                    }
-                }
-            }
+            editItemWeightElement.value = "";
+            focusWeightInput();
         };
     };
     startTareElement.id = 'start_tare_' + edit.id;
