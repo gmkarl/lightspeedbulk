@@ -620,10 +620,10 @@ weightPromptElement.innerHTML =
     '<tbody><tr>' +
     '<td class="line-description"></td>' +
     '<td><label for="edit_item_weight">Weight</label></td>' +
-    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;<a class="control">Start Tare</a></td>' +
+    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;<a class="control" tabindex=2001>Start Tare</a></td>' +
     '<td class="line-buttons">' +
-    '<button tabindex="2001" class="save-button">Save</button>' +
-    '<button tabindex="2002" class="cancel-button">Cancel</button>' +
+    '<button tabindex="2002" class="save-button">Save</button>' +
+    '<button tabindex="2003" class="cancel-button">Cancel</button>' +
     '</td>' +
     '</tr></tbody>';
 
