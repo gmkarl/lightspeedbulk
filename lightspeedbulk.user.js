@@ -620,16 +620,20 @@ weightPromptElement.innerHTML =
     '<tbody><tr>' +
     '<td class="line-description"></td>' +
     '<td><label for="edit_item_weight">Weight</label></td>' +
-    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;</td>' +
+    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;<a class="control">Start Tare</a></td>' +
     '<td class="line-buttons">' +
     '<button tabindex="2001" class="save-button">Save</button>' +
     '<button tabindex="2002" class="cancel-button">Cancel</button>' +
     '</td>' +
     '</tr></tbody>';
 
-function weightPrompt(edit, callback, cancel) {
+function weightPrompt(edit, callback, cancel_main) {
+    var tare = 0;
+    var save = save_main;
+    var cancel = cancel_main;
     var promptElement = weightPromptElement.cloneNode(true);
     var editItemWeightElement = promptElement.getElementsByClassName('number')[0];
+    var startTareElement = promptElement.getElementsByClassName('control')[0];
     var saveElement = promptElement.getElementsByClassName('save-button')[0];
     var cancelElement = promptElement.getElementsByClassName('cancel-button')[0];
     var scaleStatusElement = document.createTextNode("");
@@ -648,6 +652,39 @@ function weightPrompt(edit, callback, cancel) {
         }
     };
     editItemWeightElement.id = 'edit_item_weight_' + edit.id;
+    startTareElement.onclick = function() {
+        var nextTare = tare;
+        tare = 0;
+        startTareElement.style.visibility = "hidden";
+        saveElement.innerText = "Tare";
+        cancelElement.innerText = "Abort";
+        save = function() {
+            nextTare = parseFloat(editItemWeightElement.value);
+            cancel();
+        };
+        cancel = function() {
+            tare = nextTare;
+            startTareElement.style.visibility = "initial";
+            saveElement.innerText = "Tare";
+            cancelElement.innerText = "Cancel";
+            save = save_main;
+            cancel = cancel_main;
+            if (parseFloat(editItemWeightElement.value) != 0 && scale) {
+                var onStatusCache = scale.onStatus;
+                save = function(){};
+                scale.onStatus = function(error, status, weight, units) {
+                    if (weight != 0) {
+                        onStatusCache(error, "Wait for zero (" + status + ")", weight, units);
+                    } else {
+                        save = save_main;
+                        scale.onStatus = onStatusCache;
+                        scale.onStatus(error, status, weight, units);
+                    }
+                }
+            }
+        };
+    };
+    startTareElement.id = 'start_tare_' + edit.id;
     saveElement.onclick = function() {
         try {
             return save();
@@ -683,7 +720,7 @@ function weightPrompt(edit, callback, cancel) {
         cancelElement = null;
     }
     
-    function save() {
+    function save_main() {
         var entry = editItemWeightElement.value;
         var lbs = parseFloat(entry);
         if (entry != "" && entry != "0.0" && entry != "0" && (!(lbs > 0.04) || !(lbs < 30))) {
@@ -716,7 +753,7 @@ function weightPrompt(edit, callback, cancel) {
                     var lastWeight = editItemWeightElement.value;
                     editItemWeightElement.value = weight;
                     if (weight == lastWeight) {
-	                    save();
+                        save();
                         return;
                     }
                 }
