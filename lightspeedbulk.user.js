@@ -657,8 +657,8 @@ function weightPrompt(edit, callback, cancel_callback) {
         var nextTare = tare;
         tare = 0;
         startTareElement.style.visibility = "hidden";
-        saveElement.innerText = "Tare";
-        cancelElement.innerText = "Abort";
+        saveElement.innerHTML = "Tare";
+        cancelElement.innerHTML = "Abort";
         focusWeightInput();
         save = function() {
             nextTare = parseFloat(editItemWeightElement.value);
@@ -676,17 +676,17 @@ function weightPrompt(edit, callback, cancel_callback) {
                         }
                     }
                 }
-                startTareElement.innerText = "Retare (" + nextTare + " lb)"
+                startTareElement.innerHTML = "Retare (" + nextTare + " lb)"
             } else {
-                startTareElement.innerText = "Start Tare";
+                startTareElement.innerHTML = "Start Tare";
             }
             cancel();
         };
         cancel = function() {
             tare = nextTare;
             startTareElement.style.visibility = "initial";
-            saveElement.innerText = "Save";
-            cancelElement.innerText = "Cancel";
+            saveElement.innerHTML = "Save";
+            cancelElement.innerHTML = "Cancel";
             save = save_main;
             cancel = cancel_main;
             editItemWeightElement.value = "";
@@ -712,7 +712,7 @@ function weightPrompt(edit, callback, cancel_callback) {
             reportExceptionAsIssue(e,"cancelElement.onclick");
         }
     };
-    promptElement.getElementsByClassName('line-description')[0].innerText = edit.description;
+    promptElement.getElementsByClassName('line-description')[0].innerHTML = edit.description;
 
     function cleanup() {
         if (scale)
