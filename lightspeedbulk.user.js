@@ -675,6 +675,7 @@ function weightPrompt(edit, callback, cancel_callback) {
                             scale.onStatus(error, status, weight, units);
                         }
                     }
+		    scale.requestWeight();
                 }
                 startTareElement.innerHTML = "Retare (" + nextTare + " lb)"
             } else {
