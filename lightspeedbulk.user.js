@@ -738,10 +738,10 @@ function weightPrompt(edit, callback, cancel_callback) {
             lbs = window.prompt("This weight looks unlikely: " + entry + " lbs\nPlease enter or re-enter the proper weight in lbs.  Tare of " + tare + " will be subtracted after.", lbs);
             lbs = parseFloat(lbs);
         }
-        cleanup();
         if (!lbs) {
             cancel();
         } else {
+            cleanup();
             callback(lbs - tare);
         }
         return false;
