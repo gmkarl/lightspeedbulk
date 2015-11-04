@@ -675,7 +675,7 @@ function weightPrompt(edit, callback, cancel_callback) {
                             scale.onStatus(error, status, weight, units);
                         }
                     }
-		    scale.requestWeight();
+                    scale.requestWeight();
                 }
                 startTareElement.innerHTML = "Retare (" + nextTare + " lb)"
             } else {
@@ -757,6 +757,9 @@ function weightPrompt(edit, callback, cancel_callback) {
     function scaleFound(s) {
         scale = s;
         scaleStatusElement.data = "Scale: " + scale.protocol + " found";
+        var matchesNeeded = 8;
+        var lastWeight = -1;
+        var numberMatched = 0;
         scale.onStatus = function(error, status, weight, units) {
             scaleStatusElement.data = "Scale: " + status;
             if (!error && units && weight) {
@@ -764,13 +767,20 @@ function weightPrompt(edit, callback, cancel_callback) {
                     scaleStatusElement.data = "Scale: " + units + " not LBs";
                 } else {
                     scaleStatusElement.data = "";
-                    var lastWeight = editItemWeightElement.value;
-                    editItemWeightElement.value = weight;
                     if (weight == lastWeight) {
+                        numberMatched ++;
+                    } else {
+                        lastWeight = weight;
+                        numberMatched = 0;
+                        editItemWeightElement.value = weight;
+                    }
+                    if (numberMatched >= matchesNeeded) {
                         save();
                         return;
                     }
                 }
+            } else {
+                    lastWeight = -1;
             }
             scale.requestWeight();
         };
