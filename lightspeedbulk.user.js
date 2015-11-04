@@ -554,7 +554,7 @@ NCI.prototype = {
             else if (status2 & (1<<0))
                 this.status = "Under capacity";
             else if (status1 & (1<<0))
-                this.status = "In motion";
+                this.status = "Motion";
             else if (status1 & (1<<1))
                 this.status = "At zero";
             else if (status2 & (1<<6)) {
@@ -662,12 +662,13 @@ function weightPrompt(edit, callback, cancel_callback) {
         focusWeightInput();
         save = function() {
             nextTare = parseFloat(editItemWeightElement.value);
+            cancel();
             if (nextTare) {
                 if (scale) {
                     var onStatusCache = scale.onStatus;
-                    save = function(){};
+                    save = function(){scale.requestWeight();};
                     scale.onStatus = function(error, status, weight, units) {
-                        if (weight != 0) {
+                        if (status == "Weight" || status == "Motion") {
                             onStatusCache(error, "Wait for zero (" + status + ")", weight, units);
                         } else {
                             save = save_main;
@@ -675,13 +676,14 @@ function weightPrompt(edit, callback, cancel_callback) {
                             scale.onStatus(error, status, weight, units);
                         }
                     }
-                    scale.requestWeight();
                 }
                 startTareElement.innerHTML = "Retare (" + nextTare + " lb)"
             } else {
                 startTareElement.innerHTML = "Start Tare";
             }
-            cancel();
+            if (scale) {
+                scale.requestWeight();
+            }
         };
         cancel = function() {
             tare = nextTare;
@@ -766,7 +768,6 @@ function weightPrompt(edit, callback, cancel_callback) {
                 if (units != 'LB') {
                     scaleStatusElement.data = "Scale: " + units + " not LBs";
                 } else {
-                    scaleStatusElement.data = "";
                     if (weight == lastWeight) {
                         numberMatched ++;
                     } else {
