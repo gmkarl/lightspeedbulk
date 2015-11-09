@@ -4,6 +4,10 @@
 # weight is polled via functions.source getWeight
 . functions.source
 
+send() {
+	echo -ne '\x02'"$*"'\x0d'
+}
+
 stdbuf -oL xxd -c 1 | tee /dev/stderr | while read addr hex asc; do
 	case "$asc" in
 		"W")
