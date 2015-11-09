@@ -1,0 +1,42 @@
+WEIGHTFILE=./weight.txt
+
+# Reads a decimal lbs from WEIGHTFILE and outputs as both decimal and fraction
+# input:
+#  13.09
+# output: (13 + 9/100)
+#  13.09 13 9 100
+getWeight() {
+	lbs="$(<$WEIGHTFILE)"
+	lbs_integer=${lbs%.*}
+	lbs_frac=${lbs#*.}
+	lbs_frac_denominator=$((10**${#lbs_frac}))
+	lbs_frac_numerator="$lbs_frac"
+	while [[ "${lbs_frac_numerator:0:1}" == "0" ]]
+	do
+		lbs_frac_numerator=${lbs_frac_numerator:1}
+	done
+	if ((lbs_integer == 0)) && ((lbs_frac_numerator == 0))
+	then
+		echo 0 0 0 1
+	else
+		echo $((lbs)) $((lbs_integer)) $((lbs_frac_numerator)) $((lbs_frac_denominator))
+	fi
+}
+
+rndlist() {
+	for i in "$@"; do echo $i; done | sort -R | tail -n 1
+}
+
+rndhex() {
+	rndlist 0 1 2 3 4 5 6 7 8 9 a b c d e f
+}
+
+rnd() {
+	num=$1
+	if [ "$num" == "" ]; then num=10; fi
+	{ for ((i=0; i < num; ++i)); do echo $i; done; } | sort -R | tail -n 1
+}
+
+chance() {
+	(( $(rnd 100) <= "$*" ))
+}
