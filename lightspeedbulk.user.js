@@ -620,8 +620,9 @@ weightPromptElement.innerHTML =
     '<tbody><tr>' +
     '<td class="line-description"></td>' +
     '<td><label for="edit_item_weight">Weight</label></td>' +
-    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;<a class="control" tabindex=2001>Start Tare</a></td>' +
+    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;</td>' +
     '<td class="line-buttons">' +
+    '<button tabindex="2001" class="tare-button">Start Tare</button>' +
     '<button tabindex="2002" class="save-button">Save</button>' +
     '<button tabindex="2003" class="cancel-button">Cancel</button>' +
     '</td>' +
@@ -634,7 +635,7 @@ function weightPrompt(edit, callback, cancel_callback) {
     var cancel = cancel_main;
     var promptElement = weightPromptElement.cloneNode(true);
     var editItemWeightElement = promptElement.getElementsByClassName('number')[0];
-    var startTareElement = promptElement.getElementsByClassName('control')[0];
+    var startTareElement = promptElement.getElementsByClassName('tare-button')[0];
     var saveElement = promptElement.getElementsByClassName('save-button')[0];
     var cancelElement = promptElement.getElementsByClassName('cancel-button')[0];
     var scaleStatusElement = document.createElement("small");
