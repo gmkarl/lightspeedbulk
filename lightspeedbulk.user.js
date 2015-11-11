@@ -554,7 +554,7 @@ NCI.prototype = {
             else if (status2 & (1<<0))
                 this.status = "Under capacity";
             else if (status1 & (1<<0))
-                this.status = "In motion";
+                this.status = "Motion";
             else if (status1 & (1<<1))
                 this.status = "At zero";
             else if (status2 & (1<<6)) {
@@ -620,16 +620,21 @@ weightPromptElement.innerHTML =
     '<tbody><tr>' +
     '<td class="line-description"></td>' +
     '<td><label for="edit_item_weight">Weight</label></td>' +
-    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;</td>' +
+    '<td><input name="edit_item_weight" type="number" class="number" tabindex="2000" size="5" maxlength="15" style="margin-right:-18px; padding-right:18px">lb &nbsp;<a class="control" tabindex=2001>Start Tare</a></td>' +
     '<td class="line-buttons">' +
-    '<button tabindex="2001" class="save-button">Save</button>' +
-    '<button tabindex="2002" class="cancel-button">Cancel</button>' +
+    '<button tabindex="2002" class="save-button">Save</button>' +
+    '<button tabindex="2003" class="cancel-button">Cancel</button>' +
     '</td>' +
     '</tr></tbody>';
 
-function weightPrompt(edit, callback, cancel) {
+function weightPrompt(edit, callback, cancel_callback) {
+    var tare = 0;
+    var save = save_main;
+    var cancel_main = function () { cleanup(); cancel_callback(); };
+    var cancel = cancel_main;
     var promptElement = weightPromptElement.cloneNode(true);
     var editItemWeightElement = promptElement.getElementsByClassName('number')[0];
+    var startTareElement = promptElement.getElementsByClassName('control')[0];
     var saveElement = promptElement.getElementsByClassName('save-button')[0];
     var cancelElement = promptElement.getElementsByClassName('cancel-button')[0];
     var scaleStatusElement = document.createElement("small");
@@ -650,6 +655,50 @@ function weightPrompt(edit, callback, cancel) {
         }
     };
     editItemWeightElement.id = 'edit_item_weight_' + edit.id;
+    startTareElement.onclick = function() {
+        var nextTare = tare;
+        tare = 0;
+        startTareElement.style.visibility = "hidden";
+        saveElement.innerHTML = "Tare";
+        cancelElement.innerHTML = "Abort";
+        focusWeightInput();
+        save = function() {
+            nextTare = parseFloat(editItemWeightElement.value);
+            cancel();
+            if (nextTare) {
+                if (scale) {
+                    var onStatusCache = scale.onStatus;
+                    save = function(){scale.requestWeight();};
+                    scale.onStatus = function(error, status, weight, units) {
+                        if (status == "Weight" || status == "Motion") {
+                            onStatusCache(error, "Wait for zero (" + status + ")", weight, units);
+                        } else {
+                            save = save_main;
+                            scale.onStatus = onStatusCache;
+                            scale.onStatus(error, status, weight, units);
+                        }
+                    }
+                }
+                startTareElement.innerHTML = "Retare (" + nextTare + " lb)"
+            } else {
+                startTareElement.innerHTML = "Start Tare";
+            }
+            if (scale) {
+                scale.requestWeight();
+            }
+        };
+        cancel = function() {
+            tare = nextTare;
+            startTareElement.style.visibility = "initial";
+            saveElement.innerHTML = "Save";
+            cancelElement.innerHTML = "Cancel";
+            save = save_main;
+            cancel = cancel_main;
+            editItemWeightElement.value = "";
+            focusWeightInput();
+        };
+    };
+    startTareElement.id = 'start_tare_' + edit.id;
     saveElement.onclick = function() {
         try {
             return save();
@@ -662,59 +711,80 @@ function weightPrompt(edit, callback, cancel) {
         document.getElementById(saveElement.id).click();
     cancelElement.onclick = function() {
         try {
-            cleanup();
             cancel();
             return false;
         } catch(e) {
             reportExceptionAsIssue(e,"cancelElement.onclick");
         }
     };
-    promptElement.getElementsByClassName('line-description')[0].innerText = edit.description;
+    promptElement.getElementsByClassName('line-description')[0].innerHTML = edit.description;
 
     function cleanup() {
         if (scale)
             scale.onStatus = function(){};
         scale = null;
         editItemWeightElement.onkeypress = null;
+        startTareElement.onclick = null;
         saveElement.onclick = null;
         cancelElement.onclick = null;
         promptElement = null;
         editItemWeightElement = null;
+        startTareElement = null;
         scaleStatusElement = null;
         scaleStatusText = null;
         saveElement = null;
         cancelElement = null;
     }
     
-    function save() {
-        var lbs = parseFloat(editItemWeightElement.value);
-        cleanup();
+    function save_main() {
+        var entry = editItemWeightElement.value;
+        var lbs = parseFloat(entry);
+        if (entry != "" && entry != "0.0" && entry != "0" && (!(lbs - tare > 0.04) || !(lbs < 30))) {
+            lbs = window.prompt("This weight looks unlikely: " + entry + " lbs\nPlease enter or re-enter the proper weight in lbs.  Tare of " + tare + " will be subtracted after.", lbs);
+            lbs = parseFloat(lbs);
+        }
         if (!lbs) {
             cancel();
         } else {
-            callback(lbs);
+            cleanup();
+            callback(lbs - tare);
         }
         return false;
     }
     
     edit.editElement.parentElement.appendChild(promptElement);
     edit.editElement.style.display = 'none';
-    window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
+    function focusWeightInput() {
+        window.eval("merchantos.focus.set('"+editItemWeightElement.id+"');");
+    }
+    focusWeightInput();
     
     function scaleFound(s) {
         scale = s;
         scaleStatusText.data = "Scale: " + scale.protocol + " found";
+        var matchesNeeded = 8;
+        var lastWeight = -1;
+        var numberMatched = 0;
         scale.onStatus = function(error, status, weight, units) {
             scaleStatusText.data = "Scale: " + status;
             if (!error && units && weight) {
                 if (units != 'LB') {
                     scaleStatusText.data = "Scale: " + units + " not LBs";
                 } else {
-                    scaleStatusText.data = "";
-                    editItemWeightElement.value = weight;
-                    save();
-                    return;
+                    if (weight == lastWeight) {
+                        numberMatched ++;
+                    } else {
+                        lastWeight = weight;
+                        numberMatched = 0;
+                        editItemWeightElement.value = weight;
+                    }
+                    if (numberMatched >= matchesNeeded) {
+                        save();
+                        return;
+                    }
                 }
+            } else {
+                    lastWeight = -1;
             }
             scale.requestWeight();
         };
@@ -778,10 +848,10 @@ handlers.onInlineEdit = function(edit) {
         weightPrompt(edit, function(lbs){
             var note;
             if (unit == "oz") {
-                note = (lbs * 16) + " oz";
+                note = Math.round(lbs * 16 * 100)/100 + " oz";
                 unitPrice *= 16;
             } else {
-                note = lbs + " lb";
+                note = Math.round(lbs*100)/100 + " lb";
             }
             var newPrice = Math.ceil(unitPrice * lbs * 100)/100;
             if (edit.note != "") {
