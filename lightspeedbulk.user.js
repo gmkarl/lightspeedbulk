@@ -176,7 +176,7 @@ function reportExceptionAsIssue(error, label) {
         console.log("Event log:");
         console.log(issueEventLog);
         try {
-            if (document.getElementById("session_shop").innerHTML == "Test Store")
+            if (document.getElementById("session_shop").innerHTML == "Test Account Store")
                 return;
         } catch(e) {}
         reportExceptionAsIssueRequest = GM_xmlhttpRequest({
