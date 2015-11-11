@@ -265,12 +265,12 @@ SerialScale.find = function(success, failure) {
             destroyObject.destroy = function(){};
             try {
                 success(scale);
-		if (SerialScale.singleton != scale) {
-	                console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
-       	        	SerialScale.singleton = scale;
-	                GM_setValue('port', scale.serial.port);
-	                GM_setValue('protocol', scale.protocol);
-		}
+                if (SerialScale.singleton != scale) {
+                    console.log("Found " + scale.protocol + " scale at " + scale.serial.port);
+                    SerialScale.singleton = scale;
+                    GM_setValue('port', scale.serial.port);
+                    GM_setValue('protocol', scale.protocol);
+                }
             } catch(e) {
                 scale.destroy();
                 console.log(e.toString());
@@ -632,8 +632,10 @@ function weightPrompt(edit, callback, cancel) {
     var editItemWeightElement = promptElement.getElementsByClassName('number')[0];
     var saveElement = promptElement.getElementsByClassName('save-button')[0];
     var cancelElement = promptElement.getElementsByClassName('cancel-button')[0];
-    var scaleStatusElement = document.createTextNode("");
+    var scaleStatusElement = document.createElement("small");
+    var scaleStatusText = document.createTextNode("");
     var scale;
+    scaleStatusElement.appendChild(scaleStatusText);
     editItemWeightElement.parentElement.appendChild(scaleStatusElement);
     editItemWeightElement.onkeypress = function(event) {
         try {
@@ -679,6 +681,7 @@ function weightPrompt(edit, callback, cancel) {
         promptElement = null;
         editItemWeightElement = null;
         scaleStatusElement = null;
+        scaleStatusText = null;
         saveElement = null;
         cancelElement = null;
     }
@@ -700,14 +703,14 @@ function weightPrompt(edit, callback, cancel) {
     
     function scaleFound(s) {
         scale = s;
-        scaleStatusElement.data = "Scale: " + scale.protocol + " found";
+        scaleStatusText.data = "Scale: " + scale.protocol + " found";
         scale.onStatus = function(error, status, weight, units) {
-            scaleStatusElement.data = "Scale: " + status;
+            scaleStatusText.data = "Scale: " + status;
             if (!error && units && weight) {
                 if (units != 'LB') {
-                    scaleStatusElement.data = "Scale: " + units + " not LBs";
+                    scaleStatusText.data = "Scale: " + units + " not LBs";
                 } else {
-                    scaleStatusElement.data = "";
+                    scaleStatusText.data = "";
                     editItemWeightElement.value = weight;
                     save();
                     return;
@@ -719,15 +722,15 @@ function weightPrompt(edit, callback, cancel) {
     }
     
     function noScaleFound() {
-        scaleStatusElement.data = "Scale: not found";
+        scaleStatusText.data = "Scale: not found";
     }
     
     function lookForScale() {
-        scaleStatusElement.data = "Scale: searching ...";
+        scaleStatusText.data = "Scale: searching ...";
         try {
             return SerialScale.find(scaleFound, noScaleFound);
         } catch(e) {
-            scaleStatusElement.data = "Scale: " + e.message;
+            scaleStatusText.data = "Scale: " + e.message;
         }
     }
     
