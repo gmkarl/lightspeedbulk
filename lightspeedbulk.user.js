@@ -640,7 +640,7 @@ function weightPrompt(edit, callback, cancel_callback) {
     var cancelElement = promptElement.getElementsByClassName('cancel-button')[0];
     var scaleStatusElement = document.createElement("small");
     var scaleStatusText = document.createTextNode("");
-    var scale;
+    var scale = null;
     scaleStatusElement.appendChild(scaleStatusText);
     editItemWeightElement.parentElement.appendChild(scaleStatusElement);
     editItemWeightElement.onkeypress = function(event) {
@@ -805,7 +805,7 @@ function weightPrompt(edit, callback, cancel_callback) {
         }
     }
     
-    scale = lookForScale();
+    lookForScale();
 }
 
 
