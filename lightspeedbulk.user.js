@@ -667,7 +667,7 @@ function weightPrompt(edit, callback, cancel_callback) {
             nextTare = parseFloat(editItemWeightElement.value);
             cancel();
             if (nextTare) {
-                if (scale) {
+                if (scale.requestWeight) {
                     var onStatusCache = scale.onStatus;
                     save = function(){scale.requestWeight();};
                     scale.onStatus = function(error, status, weight, units) {
@@ -684,7 +684,7 @@ function weightPrompt(edit, callback, cancel_callback) {
             } else {
                 startTareElement.innerHTML = "Start Tare";
             }
-            if (scale) {
+            if (scale.requestWeight) {
                 scale.requestWeight();
             }
         };
@@ -805,7 +805,7 @@ function weightPrompt(edit, callback, cancel_callback) {
         }
     }
     
-    lookForScale();
+    scale = lookForScale();
 }
 
 
