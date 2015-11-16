@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lightspeed Serial Scale Bulk Items
 // @namespace    https://github.com/gmkarl/lightspeedbulk/
-// @version      0.6.1
+// @version      0.6
 // @description  Communicates with NCI scales to price bulk items in the Lightspeed Register.
 // @author       Karl Semich
 // @match        https://*.merchantos.com/register.php*
