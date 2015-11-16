@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lightspeed Serial Scale Bulk Items
 // @namespace    https://github.com/gmkarl/lightspeedbulk/
-// @version      0.6
+// @version      0.6.1
 // @description  Communicates with NCI scales to price bulk items in the Lightspeed Register.
 // @author       Karl Semich
 // @match        https://*.merchantos.com/register.php*
@@ -123,14 +123,15 @@ var handlers = {
         }, unsafeWindow, {cloneFunctions:true});
         var original_donePay = unsafeWindow.merchantos.register.donePay;
         unsafeWindow.merchantos.register.donePay = cloneInto(function() {
+            var callOriginal = true;
             try {
                 eventLog.push("donePay()");
-                if (handlers.onDonePay()) {
-                    return original_donePay();
-                }
+                callOriginal = handlers.onDonePay();
             } catch(e) {
                 reportExceptionAsIssue(e,"donePay");
-                return original_donePay();
+            }
+            if (callOriginal) {
+                original_donePay.call(this);
             }
         }, unsafeWindow, {cloneFunctions:true});
         var original_ajaxRegister_Return = unsafeWindow.merchantos.register.ajaxRegister_Return;
