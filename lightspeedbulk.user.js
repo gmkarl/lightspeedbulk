@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lightspeed Serial Scale Bulk Items
 // @namespace    https://github.com/gmkarl/lightspeedbulk/
-// @version      0.6
+// @version      0.6.1
 // @description  Communicates with NCI scales to price bulk items in the Lightspeed Register.
 // @author       Karl Semich
 // @match        https://*.merchantos.com/register.php*
@@ -105,6 +105,7 @@ InlineEdit.prototype = {
 // hook into functions to handle behavior
 var handlers = {
     onItemSearch : function(text) {},
+    onDonePay : function() {},
     onLineItem : function(item) {},
     onInlineEdit : function(edit) {},
 };
@@ -119,6 +120,18 @@ var handlers = {
                 reportExceptionAsIssue(e,"addItemSearch");
             }
             return original_addItemSearch(element);
+        }, unsafeWindow, {cloneFunctions:true});
+        var original_donePay = unsafeWindow.merchantos.register.donePay;
+        unsafeWindow.merchantos.register.donePay = cloneInto(function() {
+            try {
+                eventLog.push("donePay()");
+                if (handlers.onDonePay()) {
+                    return original_donePay();
+                }
+            } catch(e) {
+                reportExceptionAsIssue(e,"donePay");
+                return original_donePay();
+            }
         }, unsafeWindow, {cloneFunctions:true});
         var original_ajaxRegister_Return = unsafeWindow.merchantos.register.ajaxRegister_Return;
         unsafeWindow.merchantos.register.ajaxRegister_Return = cloneInto(function(result) {
@@ -628,6 +641,17 @@ weightPromptElement.innerHTML =
     '</td>' +
     '</tr></tbody>';
 
+var incompleteWeightPrompts = {};
+
+function focusIncompleteWeightPrompt() {
+    var elements = document.getElementsByName('edit_item_weight');
+    if (elements.length == 0)
+        return false;
+    var element = elements[0];
+    window.eval("merchantos.focus.set('"+element.id+"');");
+    return true;
+}
+
 function weightPrompt(edit, callback, cancel_callback) {
     var tare = 0;
     var save = save_main;
@@ -823,6 +847,15 @@ var STATE = "user";
 handlers.onItemSearch = function(text) {
     STATE = "itemSearch";
     eventLog = [eventLog[eventLog.length-1]];
+};
+
+handlers.onDonePay = function() {
+    if (focusIncompleteWeightPrompt()) {
+        window.eval('alertUser("An item needs to be weighed.");');
+        return false;
+    } else {
+        return true;
+    }
 };
 
 handlers.onLineItem = function(item) {
