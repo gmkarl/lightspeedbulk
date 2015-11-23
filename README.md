@@ -21,6 +21,10 @@ Tampermonkey: http://tampermonkey.net/
 Greasemonkey (Firefox): https://addons.mozilla.org/en-us/firefox/addon/greasemonkey/
 
 
+See also my "Lightspeed Catch Barcode" script which detects when barcodes are scanned into the wrong field:
+https://github.com/gmkarl/lightspeedcatchbarcode
+
+
 ## Serial details
 
 I made this script for a CAS PD-1 scale.  It had a proprietary cable which used
