@@ -193,7 +193,7 @@ function reportExceptionAsIssue(error, label) {
         console.log(issueTitle);
         console.log("Stack trace:");
         console.log(issueStackTrace);
-        console.log9"State:");
+        console.log("State:");
         console.log(issueState);
         console.log("Event log:");
         console.log(issueEventLog);
