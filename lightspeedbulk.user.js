@@ -183,10 +183,17 @@ function reportExceptionAsIssue(error, label) {
     try {
         var issueTitle = label + ": " + error.toString();
         var issueStackTrace = error.stack;
-        var register = document.getElementById("register");
-        var issueState = "register = " + register + "\n";
-        if (register) {
-            issueState += "register.style.display = " + register.style.display + "\n";
+        var elem;
+        var issueState = "";
+        elem = document.getElementById("session_shop");
+        issueState += "session_shop: " + session_shop + "\n";
+        if (elem) {
+            issueState += "session_shop.innerHTML: " + elem.innerHTML;
+        }
+        elem = document.getElementById("register");
+        issueState += "register: " + elem + "\n";
+        if (elem) {
+            issueState += "register.style.display: " + elem.style.display + "\n";
         }
         var issueEventLog = eventLog.join("\n")
             .replace(/<select name=\\?"employee_id\\?"[^]*?<\/select>/g, "<!-- censored employee id -->");
