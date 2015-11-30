@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lightspeed Serial Scale Bulk Items
 // @namespace    https://github.com/gmkarl/lightspeedbulk/
-// @version      0.7.2
+// @version      0.7.3
 // @description  Communicates with NCI scales to price bulk items in the Lightspeed Register.
 // @author       Karl Semich
 // @match        https://*.merchantos.com/register.php*
@@ -183,11 +183,18 @@ function reportExceptionAsIssue(error, label) {
     try {
         var issueTitle = label + ": " + error.toString();
         var issueStackTrace = error.stack;
+        var register = document.getElementById("register");
+        var issueState = "register = " + register + "\n";
+        if (register) {
+            issueState += "register.style.display = " + register.style.display + "\n";
+        }
         var issueEventLog = eventLog.join("\n")
             .replace(/<select name=\\?"employee_id\\?"[^]*?<\/select>/g, "<!-- censored employee id -->");
         console.log(issueTitle);
         console.log("Stack trace:");
         console.log(issueStackTrace);
+        console.log9"State:");
+        console.log(issueState);
         console.log("Event log:");
         console.log(issueEventLog);
         try {
@@ -205,7 +212,7 @@ function reportExceptionAsIssue(error, label) {
             },
             data: JSON.stringify({
                 title: issueTitle,
-                body: "Stack trace:\n```\n" + issueStackTrace + "\n```\nEvent log:\n```\n" + issueEventLog + "\n```"
+                body: "Stack trace:\n```\n" + issueStackTrace + "\n```\nState:\n```\n" + issueState + "\n```\nEvent log:\n```\n" + issueEventLog + "\n```"
             }),
         });
     } catch(e) {
