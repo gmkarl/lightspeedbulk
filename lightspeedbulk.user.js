@@ -188,7 +188,7 @@ function reportExceptionAsIssue(error, label) {
         elem = document.getElementById("session_shop");
         issueState += "session_shop: " + session_shop + "\n";
         if (elem) {
-            issueState += "session_shop.innerHTML: " + elem.innerHTML;
+            issueState += "session_shop.innerHTML: " + elem.innerHTML + "\n";
         }
         elem = document.getElementById("register");
         issueState += "register: " + elem + "\n";
